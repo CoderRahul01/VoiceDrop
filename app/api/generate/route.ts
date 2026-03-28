@@ -53,6 +53,16 @@ const VOICE_IDS: Record<string, string> = {
   'Riley (Casual)': 'jBpfuIE2acCO8z3wKNLl',
 };
 
+/**
+ * Dedicated voices for the Conversational tone — chosen per language.
+ * English: Anya (A) + Andrew (B)   |   Hinglish: Akshita (A) + Vidya (B)
+ * These are ElevenLabs free-tier compatible voice IDs.
+ */
+const CONVERSATIONAL_VOICE_IDS: Record<string, { a: string; b: string }> = {
+  English:  { a: 'd3MFdIuCfbAIwiu7jC4a', b: 'zSiMZcCo0oBh047sunsX' }, // Anya, Andrew
+  Hinglish: { a: '9SsFrOutdZkCkU5hIoQm', b: 'ulZgFXalzbrnPUGQGs0S' }, // Akshita, Vidya
+};
+
 const DEFAULT_VOICE_A = 'EXAVITQu4vr4xnSDxMaL';
 const DEFAULT_VOICE_B = 'TX3LPaxmHKxFdv7VOQHJ';
 
@@ -267,7 +277,7 @@ Each "text" is 1–3 natural spoken sentences that directly reference specific f
 Article: ${articleText}`,
             },
           ],
-          max_tokens: Math.min(512 * (turnCount / 6), 4096),
+          max_tokens: Math.min(200 * turnCount, 4096),
         }),
       });
 
@@ -318,8 +328,12 @@ Article: ${articleText}`,
 
     // 3. ElevenLabs TTS per turn
     console.log(`[VoiceDrop] Generating audio with ElevenLabs...`);
-    const voiceAId = VOICE_IDS[voiceA] ?? DEFAULT_VOICE_A;
-    const voiceBId = VOICE_IDS[voiceB] ?? DEFAULT_VOICE_B;
+    // Conversational tone uses dedicated language-matched voices (free-tier IDs)
+    const convVoices = tone === 'Conversational'
+      ? (CONVERSATIONAL_VOICE_IDS[language] ?? CONVERSATIONAL_VOICE_IDS.English)
+      : null;
+    const voiceAId = convVoices?.a ?? VOICE_IDS[voiceA] ?? DEFAULT_VOICE_A;
+    const voiceBId = convVoices?.b ?? VOICE_IDS[voiceB] ?? DEFAULT_VOICE_B;
     const audioBuffers: ArrayBuffer[] = [];
 
     for (const turn of turns) {

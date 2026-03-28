@@ -238,43 +238,59 @@ export default function InputCard({ onGenerate }: InputCardProps) {
           </div>
         </div>
 
-        {/* Voice selectors */}
-        <div className="grid grid-cols-2 gap-3">
-          {(
-            [
-              { id: 'voice-a', label: 'Host A', value: voiceA, voices: allowedVoices.a, set: setVoiceA },
-              { id: 'voice-b', label: 'Host B', value: voiceB, voices: allowedVoices.b, set: setVoiceB },
-            ] as const
-          ).map(({ id, label, value, voices, set }) => (
-            <div key={id} className="space-y-1.5">
-              <label htmlFor={id} className="text-[0.6rem] uppercase tracking-[0.1em] font-bold text-on-surface-variant/70 flex items-center gap-1">
-                <span className="material-symbols-outlined text-xs" aria-hidden="true">
-                  {isPaidPlan ? 'record_voice_over' : 'lock'}
-                </span>
-                {label}
-                {!isPaidPlan && (
-                  <Link href="/pricing" className="text-primary/70 hover:text-primary transition-colors normal-case font-normal tracking-normal text-[0.55rem]">
-                    &nbsp;upgrade
-                  </Link>
-                )}
-              </label>
-              <div className="relative">
-                <select
-                  id={id}
-                  className="w-full bg-surface-container-low ghost-border rounded-xl px-3 py-2.5 text-xs text-on-surface focus:ring-1 focus:ring-primary outline-none appearance-none disabled:opacity-50 cursor-pointer"
-                  value={value}
-                  onChange={(e) => set(e.target.value)}
-                  disabled={loading || !isPaidPlan}
-                >
-                  {voices.map((v) => <option key={v}>{v}</option>)}
-                </select>
-                <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-xs pointer-events-none text-on-surface-variant/50" aria-hidden="true">
-                  expand_more
-                </span>
-              </div>
+        {/* Voice selectors — hidden for Conversational (auto-matched) */}
+        {tone === 'Conversational' ? (
+          <div className="flex items-center gap-2.5 py-2.5 px-3 bg-surface-container-low ghost-border rounded-xl">
+            <span className="material-symbols-outlined text-base text-primary flex-shrink-0" aria-hidden="true" style={{ fontVariationSettings: "'FILL' 1" }}>
+              auto_awesome
+            </span>
+            <div className="min-w-0">
+              <p className="text-[0.6rem] uppercase tracking-widest font-bold text-primary">Auto-matched voices</p>
+              <p className="text-xs text-on-surface-variant mt-0.5">
+                {language === 'Hinglish'
+                  ? '🇮🇳 Akshita + Vidya — natural Hindi speakers'
+                  : '🇬🇧 Anya + Andrew — warm conversational pair'}
+              </p>
             </div>
-          ))}
-        </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {(
+              [
+                { id: 'voice-a', label: 'Host A', value: voiceA, voices: allowedVoices.a, set: setVoiceA },
+                { id: 'voice-b', label: 'Host B', value: voiceB, voices: allowedVoices.b, set: setVoiceB },
+              ] as const
+            ).map(({ id, label, value, voices, set }) => (
+              <div key={id} className="space-y-1.5">
+                <label htmlFor={id} className="text-[0.6rem] uppercase tracking-[0.1em] font-bold text-on-surface-variant/70 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-xs" aria-hidden="true">
+                    {isPaidPlan ? 'record_voice_over' : 'lock'}
+                  </span>
+                  {label}
+                  {!isPaidPlan && (
+                    <Link href="/pricing" className="text-primary/70 hover:text-primary transition-colors normal-case font-normal tracking-normal text-[0.55rem]">
+                      &nbsp;upgrade
+                    </Link>
+                  )}
+                </label>
+                <div className="relative">
+                  <select
+                    id={id}
+                    className="w-full bg-surface-container-low ghost-border rounded-xl px-3 py-2.5 text-xs text-on-surface focus:ring-1 focus:ring-primary outline-none appearance-none disabled:opacity-50 cursor-pointer"
+                    value={value}
+                    onChange={(e) => set(e.target.value)}
+                    disabled={loading || !isPaidPlan}
+                  >
+                    {voices.map((v) => <option key={v}>{v}</option>)}
+                  </select>
+                  <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-xs pointer-events-none text-on-surface-variant/50" aria-hidden="true">
+                    expand_more
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Error states */}
         {errorKind?.type === 'auth' && (

@@ -78,7 +78,28 @@ export default function TopAppBar() {
             )}
             <UserButton
               appearance={{
-                elements: { avatarBox: 'w-8 h-8' },
+                elements: {
+                  avatarBox: 'w-8 h-8',
+                  userButtonPopoverCard: {
+                    backgroundColor: '#141a17',
+                    border: '1px solid rgba(58,70,66,0.6)',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+                  },
+                  userButtonPopoverActions: { backgroundColor: '#141a17' },
+                  userButtonPopoverFooter: { backgroundColor: '#111917', borderColor: 'rgba(58,70,66,0.4)' },
+                  userButtonPopoverActionButton: { color: '#dee4de' },
+                  userPreviewMainIdentifier: { color: '#dee4de' },
+                  userPreviewSecondaryIdentifier: { color: '#b9c8be' },
+                },
+                variables: {
+                  colorBackground: '#141a17',
+                  colorText: '#dee4de',
+                  colorTextSecondary: '#b9c8be',
+                  colorPrimary: '#68dbae',
+                  colorNeutral: '#dee4de',
+                  colorInputBackground: '#1e2622',
+                  colorInputText: '#dee4de',
+                },
               }}
             />
           </Show>

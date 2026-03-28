@@ -117,21 +117,39 @@ body {
     border-color: rgba(104,219,174,0.3) !important;
   }
 
-  /* Hide empty feature list box (Free plan in PricingTable has no features defined) */
-  [class*="cl-pricingTableCardFeatureList"]:empty {
+  /* ── PricingTable feature list cleanup ────────────────────────────────── */
+  /* Hide empty feature list (Free plan has no features in Clerk) */
+  [class*="cl-pricingTableCardFeatureList"]:empty,
+  [class*="cl-pricingTableCardFeatureList"]:not(:has([class*="cl-pricingTableCardFeatureItem"])) {
     display: none !important;
-    border: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
   }
-  [class*="cl-pricingTableCard"]:has([class*="cl-pricingTableCardFeatureList"]:empty)
-    [class*="cl-pricingTableCardFeatureList"] {
-    display: none !important;
+  /* Remove the outer bordered box around feature list */
+  [class*="cl-pricingTableCardFeatureList"] {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  /* Remove individual item border-boxes / circles; use subtle separator instead */
+  [class*="cl-pricingTableCardFeatureItem"] {
+    border: none !important;
+    border-bottom: 1px solid rgba(58,70,66,0.2) !important;
+    background: transparent !important;
+    padding-top: 0.45rem !important;
+    padding-bottom: 0.45rem !important;
+  }
+  [class*="cl-pricingTableCardFeatureItem"]:last-child {
+    border-bottom: none !important;
+  }
+  /* Checkmark icon — strip any circular container */
+  [class*="cl-pricingTableCardFeatureIcon"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 
-  /* Card / payment input fields — ensure borders and text are visible on dark bg */
+  /* ── Card / payment input fields ──────────────────────────────────────── */
   [class*="cl-formField"] input,
-  [class*="cl-formField"] [class*="StripeElement"],
+  [class*="cl-formFieldInput"],
   [class*="cl-paymentInput"],
   [class*="cl-cardInput"],
   [class*="cl-cardNumber"],
@@ -143,6 +161,7 @@ body {
     font-size: 14px !important;
   }
   [class*="cl-formField"] input:focus,
+  [class*="cl-formFieldInput"]:focus,
   [class*="cl-paymentInput"]:focus,
   [class*="cl-cardNumber"]:focus,
   [class*="cl-cardExpiry"]:focus,
@@ -155,13 +174,125 @@ body {
     color: #b9c8be !important;
   }
 
-  /* UserButton dropdown */
-  .cl-userButtonPopoverCard {
-    background-color: #191f1c !important;
-    border: 1px solid rgba(58,70,66,0.5) !important;
+  /* ── Clerk modal / drawer (plan checkout + Manage Account) ────────────── */
+  [class*="cl-modalBackdrop"],
+  [class*="cl-drawerBackdrop"] {
+    background-color: rgba(13,18,16,0.88) !important;
+    backdrop-filter: blur(8px) !important;
   }
-  .cl-userButtonPopoverActionButton:hover {
-    background-color: #222926 !important;
+  [class*="cl-modalContent"],
+  [class*="cl-drawerContent"] {
+    background-color: #141a17 !important;
+    border: 1px solid rgba(58,70,66,0.6) !important;
+    color: #dee4de !important;
+  }
+  [class*="cl-modalContent"] *,
+  [class*="cl-drawerContent"] * {
+    color: inherit !important;
+  }
+
+  /* ── Checkout / payment form (Stripe embedded inside Clerk drawer) ─────── */
+  [class*="cl-checkout"],
+  [class*="cl-checkoutPage"],
+  [class*="cl-paymentSources"],
+  [class*="cl-subscriptionDetails"],
+  [class*="cl-subscriptionDetailsPage"] {
+    background-color: #141a17 !important;
+    color: #dee4de !important;
+  }
+  [class*="cl-checkout"] *,
+  [class*="cl-checkoutPage"] * {
+    color: #dee4de !important;
+  }
+  [class*="cl-subscriptionDetailsDivider"],
+  [class*="cl-checkoutDivider"],
+  [class*="cl-dividerLine"] {
+    border-color: rgba(58,70,66,0.4) !important;
+    background-color: rgba(58,70,66,0.4) !important;
+  }
+  [class*="cl-checkoutSummary"],
+  [class*="cl-checkoutLineItem"],
+  [class*="cl-checkoutTotal"] {
+    color: #dee4de !important;
+    border-color: rgba(58,70,66,0.4) !important;
+  }
+
+  /* ── UserProfile / Manage Account full panel ──────────────────────────── */
+  [class*="cl-userProfile"],
+  [class*="cl-profileSection"],
+  [class*="cl-profilePage"],
+  [class*="cl-pageScrollBox"],
+  [class*="cl-scrollBox"] {
+    background-color: #141a17 !important;
+    color: #dee4de !important;
+  }
+  [class*="cl-navbar"],
+  [class*="cl-navbarMobileMenuRow"],
+  [class*="cl-navbarMobileMenuButton"] {
+    background-color: #111917 !important;
+    border-color: rgba(58,70,66,0.5) !important;
+    color: #dee4de !important;
+  }
+  [class*="cl-navbarButton"] {
+    color: #b9c8be !important;
+  }
+  [class*="cl-navbarButton"]:hover,
+  [class*="cl-navbarButton"][data-active="true"] {
+    background-color: rgba(104,219,174,0.08) !important;
+    color: #68dbae !important;
+  }
+  [class*="cl-profileSectionTitle"],
+  [class*="cl-profileSectionTitleText"],
+  [class*="cl-headerTitle"],
+  [class*="cl-headerSubtitle"] {
+    color: #dee4de !important;
+  }
+  [class*="cl-profileSectionContent"],
+  [class*="cl-accordionTriggerButton"] {
+    color: #b9c8be !important;
+  }
+  [class*="cl-header"] {
+    border-color: rgba(58,70,66,0.5) !important;
+    background-color: #141a17 !important;
+  }
+  [class*="cl-footer"],
+  [class*="cl-footerAction"] {
+    background-color: #111917 !important;
+    border-color: rgba(58,70,66,0.4) !important;
+  }
+  [class*="cl-footerActionText"],
+  [class*="cl-footerActionLink"] {
+    color: #b9c8be !important;
+  }
+
+  /* ── UserButton dropdown (popover) ────────────────────────────────────── */
+  [class*="cl-userButtonPopoverCard"] {
+    background-color: #141a17 !important;
+    border: 1px solid rgba(58,70,66,0.6) !important;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+  }
+  [class*="cl-userButtonPopoverActions"],
+  [class*="cl-userButtonPopoverFooter"] {
+    background-color: #141a17 !important;
+    border-color: rgba(58,70,66,0.4) !important;
+  }
+  [class*="cl-userButtonPopoverActionButton"] {
+    color: #dee4de !important;
+  }
+  [class*="cl-userButtonPopoverActionButton"]:hover {
+    background-color: rgba(104,219,174,0.08) !important;
+    color: #68dbae !important;
+  }
+  [class*="cl-userButtonPopoverActionButton__signOut"] {
+    color: #f87171 !important;
+  }
+  [class*="cl-userButtonPopoverActionButton__signOut"]:hover {
+    background-color: rgba(248,113,113,0.08) !important;
+    color: #f87171 !important;
+  }
+  [class*="cl-userPreviewMainIdentifier"],
+  [class*="cl-userPreviewSecondaryIdentifier"] {
+    color: #dee4de !important;
   }
 }
 
