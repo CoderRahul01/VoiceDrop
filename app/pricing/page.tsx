@@ -68,21 +68,29 @@ export default function PricingPage() {
                 colorBackground: '#171d1a',
                 colorText: '#e8f5f0',
                 colorTextSecondary: '#bccac1',
-                colorNeutral: '#2e3d36',
+                /* colorNeutral drives borders + feature-item text in Clerk internals.
+                   Setting it light ensures all derived text colours are readable. */
+                colorNeutral: '#e8f5f0',
                 colorInputBackground: '#232e28',
                 colorInputText: '#e8f5f0',
+                colorShimmer: 'transparent',
                 borderRadius: '0.75rem',
                 fontFamily: 'var(--font-inter), sans-serif',
                 fontSize: '14px',
               },
               elements: {
-                pricingTable: 'bg-transparent',
-                pricingTableCard: 'bg-[#171d1a] border border-[rgba(61,73,67,0.5)] text-[#e8f5f0]',
-                pricingTableCardTitle: 'text-[#e8f5f0] font-extrabold',
-                pricingTableCardDescription: 'text-[#8eada1]',
-                pricingTableCardPrice: 'text-[#e8f5f0]',
-                pricingTableCardFeatureItem: 'text-[#bccac1]',
-                pricingTableCardCta: 'font-bold',
+                pricingTable: { background: 'transparent' },
+                pricingTableCard: {
+                  backgroundColor: '#171d1a',
+                  border: '1px solid rgba(61,73,67,0.6)',
+                  color: '#e8f5f0',
+                },
+                pricingTableCardTitle: { color: '#e8f5f0', fontWeight: '800' },
+                pricingTableCardDescription: { color: '#8eada1' },
+                pricingTableCardPrice: { color: '#e8f5f0' },
+                pricingTableCardFeatureItem: { color: '#bccac1' },
+                pricingTableCardFeatureIcon: { color: '#68dbae' },
+                pricingTableCardCta: { fontWeight: '700' },
               },
             }}
           />

@@ -121,70 +121,79 @@ body {
     background-color: #252b28 !important;
   }
 
-  /* PricingTable overrides */
+  /* PricingTable — nuclear catch-all: force ALL descendants to be light text.
+     This handles cl-internal-* class names that Clerk generates dynamically. */
+  [class*="cl-pricingTable"],
+  [class*="cl-pricingTable"] * {
+    color: #e8f5f0 !important;
+  }
+
+  /* Card shells */
   .cl-pricingTable {
     background: transparent !important;
   }
-  .cl-pricingTableCard {
+  [class*="cl-pricingTableCard"] {
     background-color: #171d1a !important;
-    border: 0.5px solid rgba(61,73,67,0.5) !important;
+    border: 1px solid rgba(61,73,67,0.6) !important;
     border-radius: 0.75rem !important;
-    color: #e8f5f0 !important;
   }
-  /* Highlighted / popular card */
-  .cl-pricingTableCard[data-popular="true"],
-  .cl-pricingTableCard--popular {
+
+  /* Highlight the "popular" card with a green ring */
+  [class*="cl-pricingTableCard"][data-popular="true"],
+  [class*="cl-pricingTableCard--popular"] {
     background-color: #1b211e !important;
     border-color: rgba(104,219,174,0.5) !important;
-    box-shadow: 0 0 0 1px rgba(104,219,174,0.3) !important;
+    box-shadow: 0 0 0 1px rgba(104,219,174,0.25), 0 8px 32px rgba(104,219,174,0.08) !important;
   }
-  .cl-pricingTableCardTitle {
+
+  /* Prices — make the amount pop */
+  [class*="cl-pricingTableCardPrice"] {
     color: #e8f5f0 !important;
     font-weight: 800 !important;
   }
-  .cl-pricingTableCardDescription,
-  .cl-pricingTableCardSubtitle {
+
+  /* Secondary / muted text — descriptions, period labels */
+  [class*="cl-pricingTableCardDescription"],
+  [class*="cl-pricingTableCardSubtitle"],
+  [class*="cl-pricingTableCardPricePeriod"] {
     color: #8eada1 !important;
   }
-  .cl-pricingTableCardPrice,
-  .cl-pricingTableCardPriceAmount,
-  .cl-pricingTableCardPriceAmountOuter {
-    color: #e8f5f0 !important;
-  }
-  .cl-pricingTableCardPricePeriod {
-    color: #8eada1 !important;
-  }
-  .cl-pricingTableCardFeatureItem,
-  .cl-pricingTableCardFeature {
-    color: #bccac1 !important;
-  }
-  /* Feature check icon */
-  .cl-pricingTableCardFeatureIcon {
+
+  /* Feature check icons — green */
+  [class*="cl-pricingTableCardFeatureIcon"],
+  [class*="cl-pricingTableCardFeature"] svg,
+  [class*="cl-pricingTableCardFeature"] [data-icon] {
     color: #68dbae !important;
+    fill: #68dbae !important;
   }
-  /* CTA buttons on plan cards */
-  .cl-pricingTableCardCta .cl-button,
-  .cl-pricingTableCardCta button {
+
+  /* CTA buttons — green with dark text */
+  [class*="cl-pricingTableCardCta"] button,
+  [class*="cl-pricingTableCardCta"] [role="button"],
+  [class*="cl-pricingTableCardCta"] a {
     background-color: #68dbae !important;
     color: #003827 !important;
     font-weight: 700 !important;
     border-radius: 0.75rem !important;
+    border: none !important;
   }
-  .cl-pricingTableCardCta .cl-button:hover,
-  .cl-pricingTableCardCta button:hover {
+  [class*="cl-pricingTableCardCta"] button:hover,
+  [class*="cl-pricingTableCardCta"] a:hover {
     opacity: 0.9 !important;
   }
-  /* "Current plan" / "Free" button variant */
-  .cl-pricingTableCardCta .cl-button--outline,
-  .cl-pricingTableCardCta button[data-variant="outline"] {
+
+  /* "Active / Current plan" outline variant */
+  [class*="cl-pricingTableCardCta"] [data-variant="outline"],
+  [class*="cl-pricingTableCardCta"] button[class*="outline"] {
     background-color: transparent !important;
     border: 1px solid rgba(104,219,174,0.5) !important;
     color: #68dbae !important;
   }
-  /* Badge / tag on popular plan */
+
+  /* Badges (e.g. "Active", "Popular") */
   .cl-badge,
-  .cl-pricingTableCardBadge {
-    background-color: rgba(104,219,174,0.15) !important;
+  [class*="cl-badge"] {
+    background-color: rgba(104,219,174,0.12) !important;
     color: #68dbae !important;
     border-color: rgba(104,219,174,0.3) !important;
   }
