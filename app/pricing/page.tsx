@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { PricingTable } from '@clerk/nextjs';
@@ -7,30 +8,35 @@ import TopAppBar from '@/components/TopAppBar';
 import Footer from '@/components/Footer';
 import CouponInput from '@/components/CouponInput';
 
-export default function PricingPage() {
+// Isolated so useSearchParams() sits inside a Suspense boundary (required for static builds)
+function SuccessBanner() {
   const searchParams = useSearchParams();
-  const success = searchParams.get('success') === '1';
+  if (searchParams.get('success') !== '1') return null;
+  return (
+    <div className="max-w-2xl mx-auto mb-6 p-4 bg-primary/10 border border-primary/40 rounded-xl flex items-center gap-3">
+      <span
+        className="material-symbols-outlined text-primary"
+        aria-hidden="true"
+        style={{ fontVariationSettings: "'FILL' 1" }}
+      >
+        check_circle
+      </span>
+      <p className="text-sm font-medium text-on-surface">
+        Payment successful — your plan is now active. Welcome aboard!
+      </p>
+    </div>
+  );
+}
 
+export default function PricingPage() {
   return (
     <div className="min-h-screen bg-background text-on-surface flex flex-col font-sans">
       <TopAppBar />
 
       <main className="pt-28 pb-24 px-4 flex-grow">
-        {/* Post-checkout success banner */}
-        {success && (
-          <div className="max-w-2xl mx-auto mb-6 p-4 bg-primary/10 border border-primary/40 rounded-xl flex items-center gap-3">
-            <span
-              className="material-symbols-outlined text-primary"
-              aria-hidden="true"
-              style={{ fontVariationSettings: "'FILL' 1" }}
-            >
-              check_circle
-            </span>
-            <p className="text-sm font-medium text-on-surface">
-              Payment successful — your plan is now active. Welcome aboard!
-            </p>
-          </div>
-        )}
+        <Suspense fallback={null}>
+          <SuccessBanner />
+        </Suspense>
 
         {/* Header */}
         <section className="text-center space-y-4 py-12 max-w-2xl mx-auto">
@@ -49,7 +55,7 @@ export default function PricingPage() {
           </p>
         </section>
 
-        {/* Clerk-managed pricing table — reads plans from your Clerk Dashboard */}
+        {/* Clerk-managed pricing table */}
         <div className="max-w-6xl mx-auto mt-4">
           <PricingTable
             for="user"
@@ -72,10 +78,10 @@ export default function PricingPage() {
           />
         </div>
 
-        {/* Coupon / promo code redemption */}
+        {/* Coupon / promo code */}
         <CouponInput />
 
-        {/* FAQ / trust signals */}
+        {/* FAQ */}
         <section className="max-w-2xl mx-auto mt-20 space-y-8">
           <h2 className="text-center text-[0.6875rem] uppercase tracking-[0.05em] font-bold text-primary">
             Common questions
@@ -88,7 +94,7 @@ export default function PricingPage() {
               },
               {
                 q: 'Do unused podcasts roll over?',
-                a: "No — your quota resets on the first of each month.",
+                a: 'No — your quota resets on the first of each month.',
               },
               {
                 q: 'Can I change plans any time?',
@@ -100,7 +106,7 @@ export default function PricingPage() {
               },
               {
                 q: 'Is my payment data safe?',
-                a: 'Yes — Clerk Billing uses Stripe under the hood. VoiceDrop never stores card details.',
+                a: "Yes — Clerk Billing uses Stripe under the hood. VoiceDrop never stores card details.",
               },
             ].map(({ q, a }) => (
               <div key={q} className="bg-surface-container-low ghost-border rounded-xl p-5 space-y-2">
