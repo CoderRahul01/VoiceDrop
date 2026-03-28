@@ -1,12 +1,12 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useSearchParams } from 'next/navigation';
-import { PricingTable, SignUpButton, useAuth, useUser } from '@clerk/nextjs';
+import { SignUpButton, useAuth, useUser } from '@clerk/nextjs';
 import TopAppBar from '@/components/TopAppBar';
 import Footer from '@/components/Footer';
-import CouponInput from '@/components/CouponInput';
 
 // ─── Plan config ─────────────────────────────────────────────────────────────
 
@@ -88,77 +88,6 @@ const PLANS: PlanConfig[] = [
     ],
   },
 ];
-
-// ─── Checkout modal ───────────────────────────────────────────────────────────
-
-function CheckoutModal({ onClose }: { onClose: () => void }) {
-  return (
-    <div
-      className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={{ background: 'rgba(8,13,11,0.85)', backdropFilter: 'blur(12px)' }}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Subscribe to a plan"
-    >
-      <div className="bg-surface-container-low w-full sm:max-w-5xl max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl ghost-border animate-in slide-in-from-bottom-4 sm:fade-in sm:zoom-in-95 duration-300">
-        {/* Modal header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/20 sticky top-0 bg-surface-container-low z-10">
-          <div>
-            <p className="text-[0.6875rem] uppercase tracking-[0.08em] font-bold text-primary">Subscribe</p>
-            <p className="text-xs text-on-surface-variant mt-0.5">Secured by Clerk &amp; Stripe · Cancel any time</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg ghost-border text-on-surface-variant hover:text-on-surface transition-colors"
-            aria-label="Close checkout"
-          >
-            <span className="material-symbols-outlined text-base" aria-hidden="true">close</span>
-          </button>
-        </div>
-
-        {/* Clerk PricingTable inside modal */}
-        <div className="p-6">
-          <PricingTable
-            for="user"
-            ctaPosition="bottom"
-            newSubscriptionRedirectUrl="/pricing?success=1"
-            appearance={{
-              cssLayerName: 'clerk',
-              variables: {
-                colorPrimary: '#68dbae',
-                colorBackground: '#141a17',
-                colorText: '#dee4de',
-                colorTextSecondary: '#b9c8be',
-                colorNeutral: '#dee4de',
-                colorInputBackground: '#1e2622',
-                colorInputText: '#dee4de',
-                colorShimmer: 'transparent',
-                borderRadius: '0.75rem',
-                fontFamily: 'Inter, ui-sans-serif, system-ui',
-                fontSize: '14px',
-              },
-              elements: {
-                pricingTable: { background: 'transparent' },
-                pricingTableCard: { backgroundColor: '#141a17', border: '1px solid rgba(58,70,66,0.6)', color: '#dee4de' },
-                pricingTableCardTitle: { color: '#dee4de', fontWeight: '800' },
-                pricingTableCardDescription: { color: '#8eada1' },
-                pricingTableCardPrice: { color: '#dee4de' },
-                pricingTableCardFeatureItem: { color: '#b9c8be' },
-                pricingTableCardFeatureIcon: { color: '#68dbae' },
-                pricingTableCardCta: { fontWeight: '700' },
-              },
-            }}
-          />
-        </div>
-
-        <div className="px-6 pb-6 text-center">
-          <CouponInput />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Success banner ───────────────────────────────────────────────────────────
 
@@ -277,13 +206,11 @@ function PlanCards({ onSubscribe }: { onSubscribe: () => void }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
-  const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-background text-on-surface flex flex-col font-sans">
       <TopAppBar />
-
-      {checkoutOpen && <CheckoutModal onClose={() => setCheckoutOpen(false)} />}
 
       <main className="pt-28 pb-24 px-4 flex-grow">
         <Suspense fallback={null}><SuccessBanner /></Suspense>
@@ -307,7 +234,7 @@ export default function PricingPage() {
 
         {/* Plan cards */}
         <div className="max-w-5xl mx-auto mb-16">
-          <PlanCards onSubscribe={() => setCheckoutOpen(true)} />
+          <PlanCards onSubscribe={() => router.push('/checkout')} />
         </div>
 
         {/* FAQ */}
