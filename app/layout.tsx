@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import "./globals.css";
 
 const inter = Inter({
@@ -22,19 +23,25 @@ export default function RootLayout({
   return (
     <ClerkProvider
       appearance={{
+        baseTheme: dark,
         cssLayerName: 'clerk',
         variables: {
           colorPrimary: '#68dbae',
-          colorBackground: '#1b211e',
-          colorInputBackground: '#303633',
+          colorBackground: '#141a17',
+          colorInputBackground: '#1e2622',
+          colorInputText: '#dee4de',
           colorText: '#dee4de',
-          colorTextSecondary: '#bccac1',
+          colorTextSecondary: '#b9c8be',
+          colorNeutral: '#dee4de',
+          colorShimmer: 'transparent',
           borderRadius: '0.75rem',
+          fontFamily: 'Inter, ui-sans-serif, system-ui',
+          fontSize: '14px',
         },
         elements: {
-          card: 'bg-surface-container ghost-border',
-          formButtonPrimary: 'bg-primary text-on-primary hover:opacity-90',
-          footerActionLink: 'text-primary hover:opacity-80',
+          card: { backgroundColor: '#191f1c', borderColor: 'rgba(58,70,66,0.5)' },
+          formButtonPrimary: { backgroundColor: '#68dbae', color: '#003827', fontWeight: '700' },
+          footerActionLink: { color: '#68dbae' },
         },
       }}
     >

@@ -3,30 +3,198 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { PricingTable } from '@clerk/nextjs';
+import { PricingTable, useAuth, useUser } from '@clerk/nextjs';
 import TopAppBar from '@/components/TopAppBar';
 import Footer from '@/components/Footer';
 import CouponInput from '@/components/CouponInput';
 
-// Isolated so useSearchParams() sits inside a Suspense boundary (required for static builds)
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface PlanConfig {
+  slug: string;
+  name: string;
+  price: string;
+  period: string;
+  tagline: string;
+  features: string[];
+  highlight: boolean;
+  badge?: string;
+  icon: string;
+}
+
+// ─── Plan data (display only — checkout handled by PricingTable below) ───────
+
+const PLANS: PlanConfig[] = [
+  {
+    slug: 'free',
+    name: 'Free',
+    price: '$0',
+    period: 'forever',
+    tagline: 'Try it out, no card needed.',
+    icon: 'bolt',
+    highlight: false,
+    features: [
+      '3 podcast episodes / month',
+      '2 AI voices (Sarah + James)',
+      'HD audio download',
+      'Full transcript included',
+    ],
+  },
+  {
+    slug: 'starter',
+    name: 'Starter',
+    price: '$7',
+    period: '/month',
+    tagline: 'For weekly readers who want an edge.',
+    icon: 'local_fire_department',
+    highlight: false,
+    features: [
+      '20 episodes / month',
+      'All 6 AI voice personalities',
+      'HD audio + full transcript',
+      'Custom podcast tone',
+    ],
+  },
+  {
+    slug: 'pro',
+    name: 'Pro',
+    price: '$19',
+    period: '/month',
+    tagline: 'For founders who never stop reading.',
+    icon: 'rocket_launch',
+    highlight: true,
+    badge: 'Most popular',
+    features: [
+      '50 episodes / month',
+      'All 6 AI voices + priority TTS',
+      'HD audio + full transcript',
+      'All podcast tones',
+      'Shareable episode links',
+    ],
+  },
+  {
+    slug: 'enterprise',
+    name: 'Enterprise',
+    price: '$100',
+    period: '/month',
+    tagline: 'For teams that run on information.',
+    icon: 'domain',
+    highlight: false,
+    features: [
+      'Unlimited episodes',
+      'All 6 AI voices + priority TTS',
+      'Bulk generation API',
+      'Custom voices (voice clone)',
+      'White-label output',
+      'Email support',
+    ],
+  },
+];
+
+// ─── Success banner ───────────────────────────────────────────────────────────
+
 function SuccessBanner() {
-  const searchParams = useSearchParams();
-  if (searchParams.get('success') !== '1') return null;
+  const params = useSearchParams();
+  if (params.get('success') !== '1') return null;
   return (
-    <div className="max-w-2xl mx-auto mb-6 p-4 bg-primary/10 border border-primary/40 rounded-xl flex items-center gap-3">
-      <span
-        className="material-symbols-outlined text-primary"
-        aria-hidden="true"
-        style={{ fontVariationSettings: "'FILL' 1" }}
-      >
-        check_circle
-      </span>
-      <p className="text-sm font-medium text-on-surface">
-        Payment successful — your plan is now active. Welcome aboard!
-      </p>
+    <div className="max-w-2xl mx-auto mb-6 p-4 bg-primary/8 border border-primary/30 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-500">
+      <span className="material-symbols-outlined text-primary" aria-hidden="true" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+      <p className="text-sm font-medium text-on-surface">Payment successful — your plan is now active. Welcome aboard! 🎉</p>
     </div>
   );
 }
+
+// ─── Plan display cards (purely visual) ──────────────────────────────────────
+
+function PlanDisplayCards() {
+  const { has } = useAuth();
+  const { user } = useUser();
+  const couponPlan = user?.publicMetadata?.couponPlan as string | undefined;
+  const activePlan =
+    has?.({ plan: 'enterprise' }) || couponPlan === 'enterprise' ? 'enterprise' :
+    has?.({ plan: 'pro' })        || couponPlan === 'pro'        ? 'pro' :
+    has?.({ plan: 'starter' })    || couponPlan === 'starter'    ? 'starter' :
+    'free';
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {PLANS.map((plan) => {
+        const isActive = activePlan === plan.slug;
+        return (
+          <div
+            key={plan.slug}
+            className={`relative flex flex-col rounded-2xl p-5 transition-all duration-300 ${
+              plan.highlight
+                ? 'bg-surface-container border-2 border-primary/50 shadow-[0_0_32px_rgba(104,219,174,0.12)]'
+                : 'bg-surface-container-low ghost-border hover:border-outline'
+            }`}
+          >
+            {/* Badge */}
+            {plan.badge && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-on-primary text-[0.6rem] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap">
+                {plan.badge}
+              </div>
+            )}
+            {isActive && (
+              <div className="absolute -top-3 right-4 bg-secondary-container text-on-secondary-container text-[0.6rem] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap">
+                Active
+              </div>
+            )}
+
+            {/* Header */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${plan.highlight ? 'bg-primary/15' : 'bg-surface-container-highest'}`}>
+                <span className="material-symbols-outlined text-primary text-base" aria-hidden="true" style={{ fontVariationSettings: "'FILL' 1" }}>
+                  {plan.icon}
+                </span>
+              </div>
+              <span className="font-bold text-on-surface">{plan.name}</span>
+            </div>
+
+            {/* Price */}
+            <div className="mb-1">
+              <span className="text-3xl font-extrabold text-on-surface tracking-tight">{plan.price}</span>
+              <span className="text-on-surface-variant text-xs ml-1">{plan.period}</span>
+            </div>
+            <p className="text-on-surface-variant text-xs leading-relaxed mb-5">{plan.tagline}</p>
+
+            {/* Features */}
+            <ul className="space-y-2.5 flex-grow mb-6">
+              {plan.features.map((feat) => (
+                <li key={feat} className="flex items-start gap-2 text-xs text-on-surface-variant">
+                  <span className="material-symbols-outlined text-primary flex-shrink-0 mt-0.5" style={{ fontSize: '14px', fontVariationSettings: "'FILL' 1" }} aria-hidden="true">
+                    check_circle
+                  </span>
+                  {feat}
+                </li>
+              ))}
+            </ul>
+
+            {/* CTA */}
+            {isActive ? (
+              <div className="text-center py-2 text-[0.65rem] uppercase tracking-widest font-bold text-primary ghost-border rounded-xl">
+                Current plan
+              </div>
+            ) : (
+              <a
+                href="#checkout"
+                className={`text-center py-2.5 rounded-xl text-[0.65rem] uppercase tracking-widest font-bold transition-all ${
+                  plan.highlight
+                    ? 'bg-primary text-on-primary hover:opacity-90 shadow-[0_4px_16px_rgba(104,219,174,0.25)]'
+                    : 'ghost-border text-on-surface-variant hover:text-on-surface hover:border-outline'
+                }`}
+              >
+                {plan.slug === 'free' ? 'Get started' : 'Subscribe →'}
+              </a>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
   return (
@@ -34,13 +202,11 @@ export default function PricingPage() {
       <TopAppBar />
 
       <main className="pt-28 pb-24 px-4 flex-grow">
-        <Suspense fallback={null}>
-          <SuccessBanner />
-        </Suspense>
+        <Suspense fallback={null}><SuccessBanner /></Suspense>
 
-        {/* Header */}
-        <section className="text-center space-y-4 py-12 max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container-high ghost-border mb-2">
+        {/* Page header */}
+        <section className="text-center space-y-4 py-10 max-w-2xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container ghost-border mb-2">
             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" aria-hidden="true" />
             <span className="text-[0.6875rem] uppercase tracking-[0.05em] font-medium text-on-surface-variant">
               Simple, transparent pricing
@@ -50,13 +216,27 @@ export default function PricingPage() {
             Turn articles into podcasts —<br />
             <span className="text-primary">at every scale</span>
           </h1>
-          <p className="text-on-surface-variant text-lg leading-relaxed">
+          <p className="text-on-surface-variant text-base leading-relaxed">
             Start free. No credit card required. Upgrade when you need more.
           </p>
         </section>
 
-        {/* Clerk-managed pricing table */}
-        <div className="max-w-6xl mx-auto mt-4">
+        {/* Custom plan display cards */}
+        <div className="max-w-5xl mx-auto mb-16">
+          <PlanDisplayCards />
+        </div>
+
+        {/* Official Clerk checkout section */}
+        <div id="checkout" className="max-w-5xl mx-auto scroll-mt-28">
+          <div className="text-center mb-8 space-y-2">
+            <p className="text-[0.6875rem] uppercase tracking-[0.05em] font-bold text-primary">
+              Ready to subscribe?
+            </p>
+            <p className="text-on-surface-variant text-sm">
+              Select a plan below to complete checkout — secured by Clerk &amp; Stripe.
+            </p>
+          </div>
+
           <PricingTable
             for="user"
             ctaPosition="bottom"
@@ -65,30 +245,24 @@ export default function PricingPage() {
               cssLayerName: 'clerk',
               variables: {
                 colorPrimary: '#68dbae',
-                colorBackground: '#171d1a',
-                colorText: '#e8f5f0',
-                colorTextSecondary: '#bccac1',
-                /* colorNeutral drives borders + feature-item text in Clerk internals.
-                   Setting it light ensures all derived text colours are readable. */
-                colorNeutral: '#e8f5f0',
-                colorInputBackground: '#232e28',
-                colorInputText: '#e8f5f0',
+                colorBackground: '#141a17',
+                colorText: '#dee4de',
+                colorTextSecondary: '#b9c8be',
+                colorNeutral: '#dee4de',
+                colorInputBackground: '#1e2622',
+                colorInputText: '#dee4de',
                 colorShimmer: 'transparent',
                 borderRadius: '0.75rem',
-                fontFamily: 'var(--font-inter), sans-serif',
+                fontFamily: 'Inter, ui-sans-serif, system-ui',
                 fontSize: '14px',
               },
               elements: {
                 pricingTable: { background: 'transparent' },
-                pricingTableCard: {
-                  backgroundColor: '#171d1a',
-                  border: '1px solid rgba(61,73,67,0.6)',
-                  color: '#e8f5f0',
-                },
-                pricingTableCardTitle: { color: '#e8f5f0', fontWeight: '800' },
+                pricingTableCard: { backgroundColor: '#141a17', border: '1px solid rgba(58,70,66,0.6)', color: '#dee4de' },
+                pricingTableCardTitle: { color: '#dee4de', fontWeight: '800' },
                 pricingTableCardDescription: { color: '#8eada1' },
-                pricingTableCardPrice: { color: '#e8f5f0' },
-                pricingTableCardFeatureItem: { color: '#bccac1' },
+                pricingTableCardPrice: { color: '#dee4de' },
+                pricingTableCardFeatureItem: { color: '#b9c8be' },
                 pricingTableCardFeatureIcon: { color: '#68dbae' },
                 pricingTableCardCta: { fontWeight: '700' },
               },
@@ -96,52 +270,40 @@ export default function PricingPage() {
           />
         </div>
 
-        {/* Coupon / promo code */}
+        {/* Promo code */}
         <CouponInput />
 
         {/* FAQ */}
-        <section className="max-w-2xl mx-auto mt-20 space-y-8">
+        <section className="max-w-2xl mx-auto mt-20 space-y-6">
           <h2 className="text-center text-[0.6875rem] uppercase tracking-[0.05em] font-bold text-primary">
             Common questions
           </h2>
-          <div className="space-y-4">
+          <div className="space-y-3">
             {[
-              {
-                q: 'What counts as one podcast?',
-                a: 'Each URL you convert counts as one podcast episode, regardless of article length or audio duration.',
-              },
-              {
-                q: 'Do unused podcasts roll over?',
-                a: 'No — your quota resets on the first of each month.',
-              },
-              {
-                q: 'Can I change plans any time?',
-                a: 'Yes. Upgrades take effect immediately. Downgrades take effect at the start of your next billing cycle.',
-              },
-              {
-                q: 'What payment methods do you accept?',
-                a: 'All major cards via Stripe, managed securely by Clerk Billing.',
-              },
-              {
-                q: 'Is my payment data safe?',
-                a: "Yes — Clerk Billing uses Stripe under the hood. VoiceDrop never stores card details.",
-              },
+              { q: 'What counts as one podcast?', a: 'Each URL you convert counts as one episode, regardless of length.' },
+              { q: 'Do unused podcasts roll over?', a: 'No — your quota resets on the 1st of each month.' },
+              { q: 'Can I change plans any time?', a: 'Yes. Upgrades take effect immediately; downgrades at the next billing cycle.' },
+              { q: 'What payment methods do you accept?', a: 'All major cards via Stripe, managed securely by Clerk Billing.' },
+              { q: 'Do you have promo codes?', a: 'Yes! Try LAUNCH50 for Pro or HACKATHON for Starter. Enter the code below the checkout.' },
             ].map(({ q, a }) => (
-              <div key={q} className="bg-surface-container-low ghost-border rounded-xl p-5 space-y-2">
-                <p className="font-bold text-on-surface text-sm">{q}</p>
-                <p className="text-on-surface-variant text-sm leading-relaxed">{a}</p>
-              </div>
+              <details key={q} className="bg-surface-container-low ghost-border rounded-xl group">
+                <summary className="px-5 py-4 cursor-pointer flex items-center justify-between font-bold text-sm text-on-surface select-none list-none">
+                  {q}
+                  <span className="material-symbols-outlined text-on-surface-variant group-open:rotate-180 transition-transform text-base" aria-hidden="true">
+                    expand_more
+                  </span>
+                </summary>
+                <p className="px-5 pb-4 text-on-surface-variant text-sm leading-relaxed">{a}</p>
+              </details>
             ))}
           </div>
         </section>
 
         {/* Bottom CTA */}
-        <div className="text-center mt-16 space-y-4">
+        <div className="text-center mt-12 space-y-3">
           <p className="text-on-surface-variant text-sm">
             Have a question?{' '}
-            <a href="mailto:hello@voicedrop.ai" className="text-primary hover:underline underline-offset-2">
-              Email us
-            </a>
+            <a href="mailto:hello@voicedrop.ai" className="text-primary hover:underline underline-offset-2">Email us</a>
           </p>
           <Link
             href="/"

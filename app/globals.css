@@ -5,28 +5,28 @@
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui;
 
-  /* Sonic Architect Color Palette */
-  --color-background: #0f1512;
+  /* VoiceDrop Dark Palette */
+  --color-background: #0d1210;
   --color-foreground: #dee4de;
-  
-  --color-surface-container-lowest: #0a0f0d;
-  --color-surface-container-low: #171d1a;
-  --color-surface-container: #1b211e;
-  --color-surface-container-high: #252b28;
-  --color-surface-container-highest: #303633;
-  --color-surface-bright: #343b37;
-  
+
+  --color-surface-container-lowest: #080d0b;
+  --color-surface-container-low: #141a17;
+  --color-surface-container: #191f1c;
+  --color-surface-container-high: #222926;
+  --color-surface-container-highest: #2c3330;
+  --color-surface-bright: #313935;
+
   --color-primary: #68dbae;
   --color-on-primary: #003827;
   --color-primary-container: #26a37a;
   --color-on-primary-container: #003121;
 
   --color-on-surface: #dee4de;
-  --color-on-surface-variant: #bccac1;
+  --color-on-surface-variant: #b9c8be;
   --color-outline: #87948c;
-  --color-outline-variant: #3d4943;
+  --color-outline-variant: #3a4642;
 
-  --color-secondary-container: #295140;
+  --color-secondary-container: #253f30;
   --color-on-secondary-container: #97c2ac;
 
   --color-tertiary-container: #db726b;
@@ -34,7 +34,7 @@
 }
 
 :root {
-  --background: #0f1512;
+  --background: #0d1210;
   --foreground: #dee4de;
 }
 
@@ -47,154 +47,82 @@ body {
 
 /* Custom Utilities */
 @utility ghost-border {
-  border: 0.5px solid color-mix(in srgb, var(--color-outline-variant) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-outline-variant) 40%, transparent);
+}
+
+@utility glow-primary {
+  box-shadow: 0 0 24px rgba(104, 219, 174, 0.12), 0 0 64px rgba(104, 219, 174, 0.04);
 }
 
 @utility hide-scrollbar {
   scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
+  &::-webkit-scrollbar { display: none; }
 }
 
 .material-symbols-outlined {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* ── Clerk Component Dark-Theme Overrides ─────────────────────────────────── */
+/* ── Clerk Component Overrides (supplement @clerk/themes dark) ───────────── */
 @layer clerk {
-  /* Modal / card backgrounds */
-  .cl-card,
-  .cl-modalContent,
-  .cl-signIn-root,
-  .cl-signUp-root {
-    background-color: #1b211e !important;
-    border: 0.5px solid rgba(61,73,67,0.4) !important;
-    color: #e8f5f0 !important;
-  }
-
-  /* All text inside Clerk components */
-  .cl-headerTitle,
-  .cl-headerSubtitle,
-  .cl-formFieldLabel,
-  .cl-identityPreviewText,
-  .cl-dividerText,
-  .cl-footerActionText,
-  .cl-alternativeMethodsBlockButton__emailCode,
-  .cl-internal-wkkc3b {
-    color: #e8f5f0 !important;
-  }
-
-  /* Inputs */
+  /* Ensure inputs use our palette */
   .cl-formFieldInput {
-    background-color: #232e28 !important;
-    border-color: rgba(61,73,67,0.6) !important;
-    color: #e8f5f0 !important;
+    background-color: #1e2622 !important;
+    border-color: rgba(58,70,66,0.7) !important;
+    color: #dee4de !important;
   }
   .cl-formFieldInput:focus {
     border-color: #68dbae !important;
-    box-shadow: 0 0 0 2px rgba(104,219,174,0.2) !important;
+    box-shadow: 0 0 0 2px rgba(104,219,174,0.15) !important;
   }
 
-  /* Primary action buttons */
-  .cl-formButtonPrimary,
-  .cl-button__signIn,
-  .cl-button__signUp {
-    background-color: #68dbae !important;
-    color: #003827 !important;
-    font-weight: 700 !important;
-  }
-  .cl-formButtonPrimary:hover {
-    opacity: 0.9 !important;
-  }
-
-  /* UserButton dropdown */
-  .cl-userButtonPopoverCard {
-    background-color: #1b211e !important;
-    border: 0.5px solid rgba(61,73,67,0.4) !important;
-  }
-  .cl-userButtonPopoverActionButtonText,
-  .cl-userButtonPopoverFooterText {
-    color: #e8f5f0 !important;
-  }
-  .cl-userButtonPopoverActionButton:hover {
-    background-color: #252b28 !important;
-  }
-
-  /* PricingTable — nuclear catch-all: force ALL descendants to be light text.
-     This handles cl-internal-* class names that Clerk generates dynamically. */
+  /* PricingTable — catch-all for dynamic cl-internal-* class names */
   [class*="cl-pricingTable"],
   [class*="cl-pricingTable"] * {
-    color: #e8f5f0 !important;
-  }
-
-  /* Card shells */
-  .cl-pricingTable {
-    background: transparent !important;
+    color: #dee4de !important;
   }
   [class*="cl-pricingTableCard"] {
-    background-color: #171d1a !important;
-    border: 1px solid rgba(61,73,67,0.6) !important;
+    background-color: #141a17 !important;
+    border: 1px solid rgba(58,70,66,0.6) !important;
     border-radius: 0.75rem !important;
   }
-
-  /* Highlight the "popular" card with a green ring */
-  [class*="cl-pricingTableCard"][data-popular="true"],
-  [class*="cl-pricingTableCard--popular"] {
-    background-color: #1b211e !important;
-    border-color: rgba(104,219,174,0.5) !important;
-    box-shadow: 0 0 0 1px rgba(104,219,174,0.25), 0 8px 32px rgba(104,219,174,0.08) !important;
-  }
-
-  /* Prices — make the amount pop */
-  [class*="cl-pricingTableCardPrice"] {
-    color: #e8f5f0 !important;
-    font-weight: 800 !important;
-  }
-
-  /* Secondary / muted text — descriptions, period labels */
   [class*="cl-pricingTableCardDescription"],
   [class*="cl-pricingTableCardSubtitle"],
   [class*="cl-pricingTableCardPricePeriod"] {
     color: #8eada1 !important;
   }
-
-  /* Feature check icons — green */
-  [class*="cl-pricingTableCardFeatureIcon"],
-  [class*="cl-pricingTableCardFeature"] svg,
-  [class*="cl-pricingTableCardFeature"] [data-icon] {
+  [class*="cl-pricingTableCardFeatureIcon"] svg,
+  [class*="cl-pricingTableCardFeature"] [data-icon],
+  [class*="cl-pricingTableCardFeatureIcon"] {
     color: #68dbae !important;
     fill: #68dbae !important;
   }
-
-  /* CTA buttons — green with dark text */
   [class*="cl-pricingTableCardCta"] button,
-  [class*="cl-pricingTableCardCta"] [role="button"],
-  [class*="cl-pricingTableCardCta"] a {
+  [class*="cl-pricingTableCardCta"] [role="button"] {
     background-color: #68dbae !important;
     color: #003827 !important;
     font-weight: 700 !important;
     border-radius: 0.75rem !important;
     border: none !important;
   }
-  [class*="cl-pricingTableCardCta"] button:hover,
-  [class*="cl-pricingTableCardCta"] a:hover {
-    opacity: 0.9 !important;
-  }
-
-  /* "Active / Current plan" outline variant */
   [class*="cl-pricingTableCardCta"] [data-variant="outline"],
   [class*="cl-pricingTableCardCta"] button[class*="outline"] {
     background-color: transparent !important;
-    border: 1px solid rgba(104,219,174,0.5) !important;
+    border: 1px solid rgba(104,219,174,0.4) !important;
     color: #68dbae !important;
   }
-
-  /* Badges (e.g. "Active", "Popular") */
-  .cl-badge,
   [class*="cl-badge"] {
     background-color: rgba(104,219,174,0.12) !important;
     color: #68dbae !important;
     border-color: rgba(104,219,174,0.3) !important;
+  }
+
+  /* UserButton dropdown */
+  .cl-userButtonPopoverCard {
+    background-color: #191f1c !important;
+    border: 1px solid rgba(58,70,66,0.5) !important;
+  }
+  .cl-userButtonPopoverActionButton:hover {
+    background-color: #222926 !important;
   }
 }

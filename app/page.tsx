@@ -32,12 +32,12 @@ export default function Home() {
         )}
         
         {!podcastData && (
-          <div className="py-12 flex flex-col items-center justify-center text-on-surface-variant/40 select-none">
-             <span className="material-symbols-outlined text-8xl mb-4" aria-hidden="true">
+          <div className="py-10 flex flex-col items-center justify-center gap-3 text-on-surface-variant/30 select-none">
+            <span className="material-symbols-outlined text-7xl" aria-hidden="true" style={{ fontVariationSettings: "'FILL' 1" }}>
               podcasts
             </span>
-            <p className="text-sm font-bold tracking-widest uppercase">
-              No podcast generated yet
+            <p className="text-xs font-bold tracking-widest uppercase">
+              Paste a URL above to get started
             </p>
           </div>
         )}
