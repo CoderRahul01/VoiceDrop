@@ -58,6 +58,7 @@ export default function CheckoutPage() {
                 colorInputBackground: '#1e2622',
                 colorInputText: '#dee4de',
                 colorShimmer: 'transparent',
+                colorDanger: '#f87171',
                 borderRadius: '0.75rem',
                 fontFamily: 'Inter, ui-sans-serif, system-ui',
                 fontSize: '14px',

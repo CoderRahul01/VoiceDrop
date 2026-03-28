@@ -37,6 +37,14 @@ export const PLAN_LIMITS: Record<PlanId, number> = {
   enterprise: Infinity,
 };
 
+/** Maximum podcast duration (minutes) per plan */
+export const PLAN_MAX_DURATION: Record<PlanId, number> = {
+  free: 1,
+  starter: 2,
+  pro: 3,
+  enterprise: 3,
+};
+
 export const PLANS: Plan[] = [
   {
     id: 'free',

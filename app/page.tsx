@@ -19,7 +19,7 @@ export default function Home() {
       <WelcomeModal />
       <TopAppBar />
       
-      <main className="pt-28 px-4 pb-12 max-w-2xl mx-auto space-y-8 flex-grow">
+      <main className="pt-28 px-4 pb-24 sm:pb-12 max-w-2xl mx-auto space-y-8 flex-grow">
         <Hero />
         
         <InputCard onGenerate={(data) => setPodcastData(data)} />

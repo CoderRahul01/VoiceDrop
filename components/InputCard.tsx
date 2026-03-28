@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { SignInButton, SignUpButton, useAuth, useUser } from '@clerk/nextjs';
 import { PodcastData } from '@/types';
-import { PLAN_LIMITS, PLAN_VOICES, type PlanId } from '@/lib/plans';
+import { PLAN_LIMITS, PLAN_MAX_DURATION, PLAN_VOICES, type PlanId } from '@/lib/plans';
 
 interface InputCardProps {
   onGenerate: (data: PodcastData) => void;
@@ -18,13 +18,20 @@ type ErrorKind =
 
 const TONES = ['Professional', 'Conversational', 'Debate', 'Summary'] as const;
 type Tone = typeof TONES[number];
+type Language = 'English' | 'Hinglish';
 
 const TONE_META: Record<Tone, { icon: string; desc: string }> = {
-  Professional: { icon: 'business_center', desc: 'Formal, concise, executive-ready' },
-  Conversational: { icon: 'forum', desc: 'Casual, easy-to-follow dialogue' },
+  Professional:   { icon: 'business_center', desc: 'Formal, concise, executive-ready' },
+  Conversational: { icon: 'forum', desc: 'Casual dialogue with relatable examples' },
   Debate:         { icon: 'balance', desc: 'Two opposing views explored' },
   Summary:        { icon: 'summarize', desc: 'Key takeaways only, ultra-short' },
 };
+
+const DURATION_OPTIONS: { value: 1 | 2 | 3; label: string }[] = [
+  { value: 1, label: '~1 min' },
+  { value: 2, label: '~2 min' },
+  { value: 3, label: '~3 min' },
+];
 
 export default function InputCard({ onGenerate }: InputCardProps) {
   const { has } = useAuth();
@@ -42,7 +49,10 @@ export default function InputCard({ onGenerate }: InputCardProps) {
   const [voiceA, setVoiceA] = useState('Sarah (Tech)');
   const [voiceB, setVoiceB] = useState('James (Analyst)');
   const [tone, setTone] = useState<Tone>('Professional');
+  const [language, setLanguage] = useState<Language>('English');
+  const [duration, setDuration] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
+  const maxDurationAllowed = PLAN_MAX_DURATION[plan];
   const [errorKind, setErrorKind] = useState<ErrorKind>(null);
   const [usage, setUsage] = useState<{ count: number; limit: number } | null>(null);
 
@@ -54,7 +64,7 @@ export default function InputCard({ onGenerate }: InputCardProps) {
       const res = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, voiceA, voiceB, tone }),
+        body: JSON.stringify({ url, voiceA, voiceB, tone, language, duration }),
       });
       const data = await res.json();
       if (data.requiresAuth) {
@@ -126,14 +136,75 @@ export default function InputCard({ onGenerate }: InputCardProps) {
             <button
               onClick={handleGenerate}
               disabled={loading || !url}
-              className="bg-primary text-on-primary text-sm font-bold px-5 py-3 rounded-xl hover:opacity-90 active:scale-95 transition-all flex items-center gap-1.5 whitespace-nowrap disabled:opacity-40 disabled:scale-100 disabled:cursor-not-allowed glow-primary"
+              className="bg-primary text-on-primary text-sm font-bold px-4 sm:px-5 py-3 rounded-xl hover:opacity-90 active:scale-95 transition-all flex items-center gap-1.5 whitespace-nowrap disabled:opacity-40 disabled:scale-100 disabled:cursor-not-allowed glow-primary flex-shrink-0"
             >
-              {loading ? 'Generating…' : 'Generate'}
+              <span className="hidden sm:inline">{loading ? 'Generating…' : 'Generate'}</span>
               <span className="material-symbols-outlined text-base" aria-hidden="true" style={{ fontVariationSettings: "'FILL' 1" }}>
                 {loading ? 'sync' : 'bolt'}
               </span>
             </button>
           </div>
+        </div>
+
+        {/* Language toggle */}
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[0.6rem] uppercase tracking-[0.1em] font-bold text-on-surface-variant/70 flex-shrink-0">
+            Language
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {(['English', 'Hinglish'] as Language[]).map((lang) => (
+              <button
+                key={lang}
+                onClick={() => setLanguage(lang)}
+                disabled={loading}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[0.65rem] font-bold uppercase tracking-wider transition-all border ${
+                  language === lang
+                    ? 'bg-primary/10 border-primary/50 text-primary'
+                    : 'ghost-border text-on-surface-variant hover:border-outline hover:text-on-surface'
+                }`}
+              >
+                <span>{lang === 'English' ? '🇬🇧' : '🇮🇳'}</span>
+                {lang}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Duration pills */}
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-[0.6rem] uppercase tracking-[0.1em] font-bold text-on-surface-variant/70 flex-shrink-0">
+            Length
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {DURATION_OPTIONS.map(({ value, label }) => {
+              const locked = value > maxDurationAllowed;
+              return (
+                <button
+                  key={value}
+                  onClick={() => !locked && setDuration(value)}
+                  disabled={loading || locked}
+                  title={locked ? `Upgrade to unlock ${value}-min podcasts` : undefined}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-[0.65rem] font-bold uppercase tracking-wider transition-all border ${
+                    locked
+                      ? 'ghost-border text-on-surface-variant/30 cursor-not-allowed'
+                      : duration === value
+                        ? 'bg-primary/10 border-primary/50 text-primary'
+                        : 'ghost-border text-on-surface-variant hover:border-outline hover:text-on-surface'
+                  }`}
+                >
+                  {locked && (
+                    <span className="material-symbols-outlined text-[10px]" aria-hidden="true">lock</span>
+                  )}
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          {maxDurationAllowed < 3 && (
+            <Link href="/pricing" className="text-[0.6rem] text-primary/70 hover:text-primary transition-colors ml-auto">
+              Upgrade for longer
+            </Link>
+          )}
         </div>
 
         {/* Tone selector — pill buttons */}

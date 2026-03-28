@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { PLAN_LIMITS, PLAN_VOICES, type PlanId } from '@/lib/plans';
+import { PLAN_LIMITS, PLAN_MAX_DURATION, PLAN_VOICES, type PlanId } from '@/lib/plans';
 
 /**
  * Resolve the user's effective plan.
@@ -16,8 +16,8 @@ function resolvePlan(
   return 'free';
 }
 
-// Increase function timeout for sequential TTS calls (~30-60s)
-export const maxDuration = 60;
+// Increase function timeout for longer podcasts (up to 3 min = ~16 turns × ~3s = ~48s)
+export const maxDuration = 120;
 
 interface Turn {
   speaker: 'A' | 'B';
@@ -29,7 +29,20 @@ interface GenerateBody {
   voiceA: string;
   voiceB: string;
   tone: string;
+  language?: string;  // 'English' | 'Hinglish' — default 'English'
+  duration?: number;  // 1 | 2 | 3 (minutes) — default 1
 }
+
+/** Number of dialogue turns per requested duration */
+const TURNS_FOR_DURATION: Record<number, number> = { 1: 6, 2: 10, 3: 16 };
+
+/** Expanded tone instructions for richer prompting */
+const TONE_PROMPT: Record<string, string> = {
+  Professional:    'formal, concise, and executive-ready — use precise language and structured points',
+  Conversational:  'casual and friendly, like two colleagues chatting over coffee — warm, accessible, engaging',
+  Debate:          'two contrasting viewpoints — Host A argues strongly FOR the topic, Host B argues strongly AGAINST; be direct and sharp',
+  Summary:         'ultra-brief key takeaways only — each turn is one punchy, standalone sentence',
+};
 
 const VOICE_IDS: Record<string, string> = {
   'Sarah (Tech)': 'EXAVITQu4vr4xnSDxMaL',
@@ -138,6 +151,13 @@ export async function POST(req: NextRequest) {
 
     const body = (await req.json()) as GenerateBody;
     const { url: articleUrl, tone } = body;
+    const language = body.language ?? 'English';
+    const requestedDuration = typeof body.duration === 'number' ? body.duration : 1;
+
+    // Enforce duration per plan (free=1min, starter=2min, pro/enterprise=3min)
+    const maxAllowedDuration = PLAN_MAX_DURATION[plan] ?? 1;
+    const effectiveDuration = Math.min(requestedDuration, maxAllowedDuration);
+    const turnCount = TURNS_FOR_DURATION[effectiveDuration] ?? 6;
 
     // Enforce allowed voices for the user's plan (prevents client-side bypass)
     const allowedVoices = PLAN_VOICES[plan] ?? PLAN_VOICES.free;
@@ -182,17 +202,53 @@ export async function POST(req: NextRequest) {
     const title = rawTitle.replace(/\s*[|\-–]\s*.+$/, '').trim();
     const source = new URL(articleUrl).hostname.replace('www.', '');
 
-    // 2. Workers AI → podcast dialogue JSON (using messages/chat format for cleaner output)
-    console.log(`[VoiceDrop] Generating dialogue with Workers AI...`);
+    const cfBase = `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/ai/run`;
+    const cfHeaders = { Authorization: `Bearer ${cfApiToken}`, 'Content-Type': 'application/json' };
 
-    const aiRes = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/ai/run/@cf/meta/llama-3.1-8b-instruct`,
-      {
+    // 2a. CF Workers AI — Step 1: Extract key facts for richer dialogue (fast, small model)
+    console.log(`[VoiceDrop] Extracting key facts with Workers AI...`);
+    let keyFacts = '';
+    try {
+      const factsRes = await fetch(`${cfBase}/@cf/meta/llama-3.1-8b-instruct`, {
+        method: 'POST', headers: cfHeaders,
+        body: JSON.stringify({
+          messages: [
+            { role: 'system', content: 'You are a JSON API. Output ONLY a raw JSON array of strings. No markdown, no explanation.' },
+            { role: 'user', content: `Extract the 5 most important facts, statistics, or quotes from this article as a JSON array of strings.\nArticle: ${articleText.slice(0, 2000)}` },
+          ],
+          max_tokens: 400,
+        }),
+      });
+      if (factsRes.ok) {
+        const factsData = await factsRes.json();
+        const rawFacts: string = (factsData.result?.response ?? '').trim();
+        const factsStart = rawFacts.indexOf('[');
+        if (factsStart !== -1) {
+          try {
+            const parsed = JSON.parse(rawFacts.slice(factsStart, rawFacts.lastIndexOf(']') + 1));
+            if (Array.isArray(parsed)) keyFacts = parsed.slice(0, 5).join(' | ');
+          } catch { /* use empty keyFacts */ }
+        }
+      }
+    } catch { /* non-blocking — proceed without facts */ }
+
+    // 2b. CF Workers AI — Step 2: Generate the full dialogue
+    console.log(`[VoiceDrop] Generating dialogue with Workers AI (${turnCount} turns, ${language})...`);
+
+    const toneInstruction = TONE_PROMPT[tone] ?? `${tone} in style`;
+    const isHinglish = language === 'Hinglish';
+    const languageInstruction = isHinglish
+      ? `Write naturally in Hinglish — the mixed Hindi-English spoken in Indian cities. Use Devanagari script inline for Hindi words/phrases (e.g. "यह point बहुत important है"). Keep it conversational, not translated.`
+      : `Write in clear, natural English.`;
+    const indianExampleInstruction =
+      tone === 'Conversational'
+        ? `Include at least one relatable everyday analogy — something familiar to urban Indian professionals, such as ordering on Swiggy, an IPL match moment, a WhatsApp group situation, or a Mumbai/Bangalore commute.`
+        : '';
+    const factsContext = keyFacts ? `Key facts to reference: ${keyFacts}\n` : '';
+
+    const aiRes = await fetch(`${cfBase}/@cf/meta/llama-3.1-8b-instruct`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${cfApiToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers: cfHeaders,
         body: JSON.stringify({
           messages: [
             {
@@ -202,17 +258,18 @@ export async function POST(req: NextRequest) {
             },
             {
               role: 'user',
-              content: `Write a ${tone} podcast dialogue between Host A and Host B about this article.
-Output a JSON array of exactly 6 objects, alternating speakers starting with A.
+              content: `Write a ${toneInstruction} podcast dialogue between Host A and Host B about this article.
+${languageInstruction}
+${indianExampleInstruction}
+${factsContext}Output a JSON array of exactly ${turnCount} objects, alternating speakers starting with A.
 Each object: {"speaker":"A","text":"..."} or {"speaker":"B","text":"..."}.
-Each "text" is 1–2 concise natural spoken sentences referencing specific facts from the article.
+Each "text" is 1–3 natural spoken sentences that directly reference specific facts from the article. Do not be generic.
 Article: ${articleText}`,
             },
           ],
-          max_tokens: 2048,
+          max_tokens: Math.min(512 * (turnCount / 6), 4096),
         }),
-      }
-    );
+      });
 
     if (!aiRes.ok) {
       const err = await aiRes.text();
@@ -302,7 +359,7 @@ Article: ${articleText}`,
     const audioBase64 = Buffer.from(stitched).toString('base64');
 
     const estimatedSeconds = stitched.byteLength / 16000;
-    const duration = formatDuration(estimatedSeconds);
+    const audioDuration = formatDuration(estimatedSeconds);
 
     // 5. Persist incremented usage count in Clerk privateMetadata
     const newCount = usageCount + 1;
@@ -320,7 +377,7 @@ Article: ${articleText}`,
       transcript: turns,
       title,
       source,
-      duration,
+      duration: audioDuration,
       // Usage context for the UI
       usageCount: newCount,
       limit,

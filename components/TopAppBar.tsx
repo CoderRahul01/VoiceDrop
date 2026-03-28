@@ -1,9 +1,25 @@
 'use client';
 
 import Link from 'next/link';
-import { Show, SignInButton, SignUpButton, UserButton } from '@clerk/nextjs';
+import { Show, SignInButton, SignUpButton, UserButton, useAuth, useUser } from '@clerk/nextjs';
+
+const PLAN_BADGE: Record<string, { label: string; className: string }> = {
+  starter:    { label: 'Starter', className: 'bg-secondary-container/60 text-on-secondary-container border-secondary-container' },
+  pro:        { label: 'Pro',     className: 'bg-primary/10 text-primary border-primary/30' },
+  enterprise: { label: 'Elite',  className: 'bg-[rgba(219,114,107,0.12)] text-[#db726b] border-[rgba(219,114,107,0.3)]' },
+};
 
 export default function TopAppBar() {
+  const { has } = useAuth();
+  const { user } = useUser();
+  const couponPlan = user?.publicMetadata?.couponPlan as string | undefined;
+  const activePaid =
+    has?.({ plan: 'enterprise' }) || couponPlan === 'enterprise' ? 'enterprise' :
+    has?.({ plan: 'pro' })        || couponPlan === 'pro'        ? 'pro' :
+    has?.({ plan: 'starter' })    || couponPlan === 'starter'    ? 'starter' :
+    null;
+  const badge = activePaid ? PLAN_BADGE[activePaid] : null;
+
   return (
     <header className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-primary-container/20">
       <div className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto">
@@ -42,12 +58,12 @@ export default function TopAppBar() {
           {/* Auth — signed out */}
           <Show when="signed-out">
             <SignInButton mode="modal">
-              <button className="text-[0.6875rem] uppercase tracking-[0.05em] font-bold text-on-surface-variant hover:text-primary transition-colors px-3 py-1.5">
+              <button className="text-[0.6875rem] uppercase tracking-[0.05em] font-bold text-on-surface-variant hover:text-primary transition-colors px-2 sm:px-3 py-1.5">
                 Sign In
               </button>
             </SignInButton>
             <SignUpButton mode="modal">
-              <button className="bg-primary text-on-primary text-[0.6875rem] uppercase tracking-[0.05em] font-bold px-4 py-1.5 rounded-lg hover:opacity-90 active:scale-95 transition-all">
+              <button className="bg-primary text-on-primary text-[0.6875rem] uppercase tracking-[0.05em] font-bold px-3 sm:px-4 py-1.5 rounded-lg hover:opacity-90 active:scale-95 transition-all whitespace-nowrap">
                 Get Started
               </button>
             </SignUpButton>
@@ -55,11 +71,14 @@ export default function TopAppBar() {
 
           {/* Auth — signed in */}
           <Show when="signed-in">
+            {badge && (
+              <span className={`text-[0.5rem] uppercase tracking-widest font-extrabold px-2 py-0.5 rounded-full border ${badge.className}`}>
+                {badge.label}
+              </span>
+            )}
             <UserButton
               appearance={{
-                elements: {
-                  avatarBox: 'w-8 h-8',
-                },
+                elements: { avatarBox: 'w-8 h-8' },
               }}
             />
           </Show>

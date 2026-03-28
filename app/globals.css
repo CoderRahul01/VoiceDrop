@@ -117,6 +117,44 @@ body {
     border-color: rgba(104,219,174,0.3) !important;
   }
 
+  /* Hide empty feature list box (Free plan in PricingTable has no features defined) */
+  [class*="cl-pricingTableCardFeatureList"]:empty {
+    display: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  [class*="cl-pricingTableCard"]:has([class*="cl-pricingTableCardFeatureList"]:empty)
+    [class*="cl-pricingTableCardFeatureList"] {
+    display: none !important;
+  }
+
+  /* Card / payment input fields — ensure borders and text are visible on dark bg */
+  [class*="cl-formField"] input,
+  [class*="cl-formField"] [class*="StripeElement"],
+  [class*="cl-paymentInput"],
+  [class*="cl-cardInput"],
+  [class*="cl-cardNumber"],
+  [class*="cl-cardExpiry"],
+  [class*="cl-cardCvc"] {
+    background-color: #1e2622 !important;
+    border: 1px solid rgba(104,219,174,0.25) !important;
+    color: #dee4de !important;
+    font-size: 14px !important;
+  }
+  [class*="cl-formField"] input:focus,
+  [class*="cl-paymentInput"]:focus,
+  [class*="cl-cardNumber"]:focus,
+  [class*="cl-cardExpiry"]:focus,
+  [class*="cl-cardCvc"]:focus {
+    border-color: rgba(104,219,174,0.6) !important;
+    box-shadow: 0 0 0 2px rgba(104,219,174,0.12) !important;
+  }
+  [class*="cl-formField"] label,
+  [class*="cl-formFieldLabel"] {
+    color: #b9c8be !important;
+  }
+
   /* UserButton dropdown */
   .cl-userButtonPopoverCard {
     background-color: #191f1c !important;
@@ -124,5 +162,18 @@ body {
   }
   .cl-userButtonPopoverActionButton:hover {
     background-color: #222926 !important;
+  }
+}
+
+/* ── Mobile Responsive Overrides ────────────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Clerk PricingTable: force single column on small screens */
+  [class*="cl-pricingTable"] {
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+  [class*="cl-pricingTableCard"] {
+    width: 100% !important;
+    min-width: 0 !important;
   }
 }
