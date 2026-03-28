@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { PricingTable } from '@clerk/nextjs';
 import TopAppBar from '@/components/TopAppBar';
 import Footer from '@/components/Footer';
+import CouponInput from '@/components/CouponInput';
 
 export default function PricingPage() {
   const searchParams = useSearchParams();
@@ -70,6 +71,9 @@ export default function PricingPage() {
             }}
           />
         </div>
+
+        {/* Coupon / promo code redemption */}
+        <CouponInput />
 
         {/* FAQ / trust signals */}
         <section className="max-w-2xl mx-auto mt-20 space-y-8">

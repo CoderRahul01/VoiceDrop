@@ -2,11 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { PLAN_LIMITS, PLAN_VOICES, type PlanId } from '@/lib/plans';
 
-/** Resolve the user's active Clerk billing plan slug → PlanId. */
-function resolvePlan(has: (params: { plan: string }) => boolean): PlanId {
-  if (has({ plan: 'enterprise' })) return 'enterprise';
-  if (has({ plan: 'pro' }))        return 'pro';
-  if (has({ plan: 'starter' }))    return 'starter';
+/**
+ * Resolve the user's effective plan.
+ * Priority: Clerk Billing subscription > coupon grant (publicMetadata.couponPlan) > free.
+ */
+function resolvePlan(
+  has: (params: { plan: string }) => boolean,
+  couponPlan?: string
+): PlanId {
+  if (has({ plan: 'enterprise' }) || couponPlan === 'enterprise') return 'enterprise';
+  if (has({ plan: 'pro' })        || couponPlan === 'pro')        return 'pro';
+  if (has({ plan: 'starter' })    || couponPlan === 'starter')    return 'starter';
   return 'free';
 }
 
@@ -93,12 +99,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 0b. Resolve plan via Clerk Billing has() checks
-    const plan = resolvePlan(has);
-    const limit = PLAN_LIMITS[plan];
-
+    // 0b. Load user + resolve effective plan (subscription OR coupon grant)
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
+    const couponPlan = user.publicMetadata?.couponPlan as string | undefined;
+    const plan = resolvePlan(has, couponPlan);
+    const limit = PLAN_LIMITS[plan];
 
     const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
     const storedMonth = user.privateMetadata?.usageMonth as string | undefined;
