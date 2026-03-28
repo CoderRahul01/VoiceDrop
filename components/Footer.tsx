@@ -1,30 +1,51 @@
+import Link from 'next/link';
+
 export default function Footer() {
   return (
-    <footer className="w-full py-12 bg-background border-t border-primary-container/10 mt-auto">
-      <div className="flex flex-col md:flex-row justify-between items-center px-8 gap-4 max-w-7xl mx-auto">
-        <span className="text-[0.6875rem] uppercase tracking-[0.05em] font-medium text-on-surface-variant/60">
-          © 2024 VoiceDrop. Built with ElevenLabs + Cloudflare.
-        </span>
-        <div className="flex gap-6">
-          <a
-            href="#"
-            className="text-[0.6875rem] uppercase tracking-[0.05em] font-medium text-on-surface-variant/60 hover:text-primary transition-colors"
+    <footer className="w-full py-10 bg-background border-t border-primary-container/10 mt-auto">
+      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
+        {/* Brand */}
+        <div className="flex flex-col items-center md:items-start gap-0.5">
+          <span className="text-[0.6875rem] font-extrabold tracking-tight text-on-surface-variant/70">
+            VoiceDrop
+          </span>
+          <span className="text-[0.575rem] uppercase tracking-widest text-on-surface-variant/40">
+            By Anteratic Solutions · Built with ElevenLabs + Cloudflare
+          </span>
+        </div>
+
+        {/* Links */}
+        <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+          <Link
+            href="/privacy"
+            className="text-[0.6rem] uppercase tracking-widest font-medium text-on-surface-variant/50 hover:text-primary transition-colors"
           >
             Privacy
-          </a>
-          <a
-            href="#"
-            className="text-[0.6875rem] uppercase tracking-[0.05em] font-medium text-on-surface-variant/60 hover:text-primary transition-colors"
+          </Link>
+          <Link
+            href="/terms"
+            className="text-[0.6rem] uppercase tracking-widest font-medium text-on-surface-variant/50 hover:text-primary transition-colors"
           >
             Terms
-          </a>
+          </Link>
           <a
-            href="#"
-            className="text-[0.6875rem] uppercase tracking-[0.05em] font-medium text-on-surface-variant/60 hover:text-primary transition-colors"
+            href="mailto:support@anteratic.com"
+            className="text-[0.6rem] uppercase tracking-widest font-medium text-on-surface-variant/50 hover:text-primary transition-colors"
           >
-            API
+            Support
           </a>
+          <Link
+            href="/pricing"
+            className="text-[0.6rem] uppercase tracking-widest font-medium text-on-surface-variant/50 hover:text-primary transition-colors"
+          >
+            Pricing
+          </Link>
         </div>
+
+        {/* Copyright */}
+        <span className="text-[0.575rem] uppercase tracking-widest text-on-surface-variant/35">
+          © 2026 Anteratic Solutions
+        </span>
       </div>
     </footer>
   );

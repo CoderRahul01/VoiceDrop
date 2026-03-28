@@ -19,7 +19,7 @@ export default function Home() {
       <WelcomeModal />
       <TopAppBar />
       
-      <main className="pt-28 px-4 pb-24 sm:pb-12 max-w-2xl mx-auto space-y-8 flex-grow">
+      <main className="pt-28 px-4 pb-12 max-w-2xl mx-auto space-y-8 flex-grow">
         <Hero />
         
         <InputCard onGenerate={(data) => setPodcastData(data)} />
@@ -44,14 +44,6 @@ export default function Home() {
       </main>
 
       <Footer />
-
-      {/* Floating Action Button (Prototype Style) */}
-      <button 
-        className="fixed bottom-6 right-6 w-14 h-14 bg-primary-container text-on-primary-container rounded-full shadow-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all z-40"
-        aria-label="Create new podcast"
-      >
-        <span className="material-symbols-outlined text-3xl" aria-hidden="true">add</span>
-      </button>
     </div>
   );
 }

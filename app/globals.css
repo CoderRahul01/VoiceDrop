@@ -76,63 +76,70 @@ body {
     box-shadow: 0 0 0 2px rgba(104,219,174,0.15) !important;
   }
 
-  /* PricingTable — catch-all for dynamic cl-internal-* class names */
+  /* ── PricingTable — global colour pass ───────────────────────────────── */
   [class*="cl-pricingTable"],
   [class*="cl-pricingTable"] * {
     color: #dee4de !important;
   }
+
+  /* Card outer shell */
   [class*="cl-pricingTableCard"] {
     background-color: #141a17 !important;
     border: 1px solid rgba(58,70,66,0.6) !important;
-    border-radius: 0.75rem !important;
+    border-radius: 1rem !important;
+    overflow: hidden !important;
   }
+
+  /* ── Nuclear inner-border removal ─────────────────────────────────────── */
+  /* Clerk renders every section of the card as a bare <div>/<section> child
+     and gives them all border-bottom in its own stylesheet.  Strip them all,
+     then restore a single hair-thin separator between sections only. */
+  [class*="cl-pricingTableCard"] > *,
+  [class*="cl-pricingTableCard"] > div,
+  [class*="cl-pricingTableCard"] > section {
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: 1px solid rgba(58,70,66,0.14) !important;
+    background: transparent !important;
+  }
+  [class*="cl-pricingTableCard"] > *:last-child,
+  [class*="cl-pricingTableCard"] > div:last-child,
+  [class*="cl-pricingTableCard"] > section:last-child {
+    border-bottom: none !important;
+  }
+
+  /* Tier name, price, description */
   [class*="cl-pricingTableCardDescription"],
   [class*="cl-pricingTableCardSubtitle"],
   [class*="cl-pricingTableCardPricePeriod"] {
     color: #8eada1 !important;
   }
-  [class*="cl-pricingTableCardFeatureIcon"] svg,
-  [class*="cl-pricingTableCardFeature"] [data-icon],
-  [class*="cl-pricingTableCardFeatureIcon"] {
-    color: #68dbae !important;
-    fill: #68dbae !important;
+  [class*="cl-pricingTableCardTitle"] {
+    font-weight: 800 !important;
+    font-size: 1.1rem !important;
   }
-  [class*="cl-pricingTableCardCta"] button,
-  [class*="cl-pricingTableCardCta"] [role="button"] {
-    background-color: #68dbae !important;
-    color: #003827 !important;
-    font-weight: 700 !important;
-    border-radius: 0.75rem !important;
-    border: none !important;
-  }
-  [class*="cl-pricingTableCardCta"] [data-variant="outline"],
-  [class*="cl-pricingTableCardCta"] button[class*="outline"] {
-    background-color: transparent !important;
-    border: 1px solid rgba(104,219,174,0.4) !important;
-    color: #68dbae !important;
-  }
-  [class*="cl-badge"] {
-    background-color: rgba(104,219,174,0.12) !important;
-    color: #68dbae !important;
-    border-color: rgba(104,219,174,0.3) !important;
+  [class*="cl-pricingTableCardPrice"] {
+    font-weight: 800 !important;
   }
 
-  /* ── PricingTable feature list cleanup ────────────────────────────────── */
-  /* Hide empty feature list (Free plan has no features in Clerk) */
+  /* ── Feature list cleanup ─────────────────────────────────────────────── */
+  /* Hide empty feature container (Free plan has nothing defined in Clerk) */
   [class*="cl-pricingTableCardFeatureList"]:empty,
   [class*="cl-pricingTableCardFeatureList"]:not(:has([class*="cl-pricingTableCardFeatureItem"])) {
     display: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: 0 !important;
   }
-  /* Remove the outer bordered box around feature list */
   [class*="cl-pricingTableCardFeatureList"] {
     border: none !important;
     background: transparent !important;
-    padding: 0 !important;
+    padding: 0.25rem 0 !important;
   }
-  /* Remove individual item border-boxes / circles; use subtle separator instead */
   [class*="cl-pricingTableCardFeatureItem"] {
     border: none !important;
-    border-bottom: 1px solid rgba(58,70,66,0.2) !important;
+    border-bottom: 1px solid rgba(58,70,66,0.18) !important;
     background: transparent !important;
     padding-top: 0.45rem !important;
     padding-bottom: 0.45rem !important;
@@ -140,11 +147,51 @@ body {
   [class*="cl-pricingTableCardFeatureItem"]:last-child {
     border-bottom: none !important;
   }
-  /* Checkmark icon — strip any circular container */
+  /* Checkmark icon — no circle/background */
   [class*="cl-pricingTableCardFeatureIcon"] {
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
+  }
+  [class*="cl-pricingTableCardFeatureIcon"] svg,
+  [class*="cl-pricingTableCardFeature"] [data-icon] {
+    color: #68dbae !important;
+    fill: #68dbae !important;
+  }
+
+  /* ── CTA button — polished solid green ────────────────────────────────── */
+  [class*="cl-pricingTableCardCta"] button,
+  [class*="cl-pricingTableCardCta"] [role="button"] {
+    background: linear-gradient(135deg, #68dbae, #4fc99a) !important;
+    color: #003827 !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.04em !important;
+    border-radius: 0.875rem !important;
+    padding: 0.65rem 1.5rem !important;
+    border: none !important;
+    width: 100% !important;
+    transition: opacity 0.15s ease !important;
+    box-shadow: 0 2px 12px rgba(104,219,174,0.2) !important;
+  }
+  [class*="cl-pricingTableCardCta"] button:hover,
+  [class*="cl-pricingTableCardCta"] [role="button"]:hover {
+    opacity: 0.88 !important;
+  }
+  /* "Active plan" / outline variant */
+  [class*="cl-pricingTableCardCta"] [data-variant="outline"],
+  [class*="cl-pricingTableCardCta"] button[class*="outline"],
+  [class*="cl-pricingTableCardCta"] button[class*="ghost"] {
+    background: transparent !important;
+    border: 1px solid rgba(104,219,174,0.4) !important;
+    color: #68dbae !important;
+    box-shadow: none !important;
+  }
+
+  /* Plan badge (e.g. "Active", "Most Popular") */
+  [class*="cl-badge"] {
+    background-color: rgba(104,219,174,0.12) !important;
+    color: #68dbae !important;
+    border-color: rgba(104,219,174,0.3) !important;
   }
 
   /* ── Card / payment input fields ──────────────────────────────────────── */

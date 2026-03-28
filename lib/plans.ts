@@ -22,6 +22,21 @@ export interface Plan {
   clerkPlanSlug: string;
 }
 
+/** All voices with metadata — used to render the visual voice picker */
+export const ALL_VOICES: {
+  name: string;
+  id: string;
+  desc: string;
+  slot: 'a' | 'b' | 'both';
+}[] = [
+  { name: 'Sarah (Tech)',     id: 'EXAVITQu4vr4xnSDxMaL', desc: 'Analytical · Clear',    slot: 'a' },
+  { name: 'David (Deep)',     id: 'onwK4e9ZLuTAKqWW03F9', desc: 'Authoritative · Calm',  slot: 'a' },
+  { name: 'Marcus (Hype)',    id: 'pNInz6obpgDQGcFmaJgB', desc: 'Energetic · Bold',      slot: 'a' },
+  { name: 'James (Analyst)',  id: 'TX3LPaxmHKxFdv7VOQHJ', desc: 'Precise · Measured',   slot: 'b' },
+  { name: 'Elena (Skeptic)',  id: 'ThT5KcBeYPX3keUQqHPh', desc: 'Inquisitive · Sharp',  slot: 'b' },
+  { name: 'Riley (Casual)',   id: 'jBpfuIE2acCO8z3wKNLl', desc: 'Warm · Accessible',    slot: 'b' },
+];
+
 // Voices available per plan tier
 export const PLAN_VOICES: Record<PlanId, { a: string[]; b: string[] }> = {
   free:       { a: ['Sarah (Tech)'],   b: ['James (Analyst)'] },

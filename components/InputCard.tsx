@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { SignInButton, SignUpButton, useAuth, useUser } from '@clerk/nextjs';
 import { PodcastData } from '@/types';
-import { PLAN_LIMITS, PLAN_MAX_DURATION, PLAN_VOICES, type PlanId } from '@/lib/plans';
+import { ALL_VOICES, PLAN_LIMITS, PLAN_MAX_DURATION, PLAN_VOICES, type PlanId } from '@/lib/plans';
 
 interface InputCardProps {
   onGenerate: (data: PodcastData) => void;
@@ -238,7 +238,7 @@ export default function InputCard({ onGenerate }: InputCardProps) {
           </div>
         </div>
 
-        {/* Voice selectors — hidden for Conversational (auto-matched) */}
+        {/* Voice picker — auto-matched for Conversational, visual grid for all other tones */}
         {tone === 'Conversational' ? (
           <div className="flex items-center gap-2.5 py-2.5 px-3 bg-surface-container-low ghost-border rounded-xl">
             <span className="material-symbols-outlined text-base text-primary flex-shrink-0" aria-hidden="true" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -254,41 +254,84 @@ export default function InputCard({ onGenerate }: InputCardProps) {
             </div>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            {(
-              [
-                { id: 'voice-a', label: 'Host A', value: voiceA, voices: allowedVoices.a, set: setVoiceA },
-                { id: 'voice-b', label: 'Host B', value: voiceB, voices: allowedVoices.b, set: setVoiceB },
-              ] as const
-            ).map(({ id, label, value, voices, set }) => (
-              <div key={id} className="space-y-1.5">
-                <label htmlFor={id} className="text-[0.6rem] uppercase tracking-[0.1em] font-bold text-on-surface-variant/70 flex items-center gap-1">
-                  <span className="material-symbols-outlined text-xs" aria-hidden="true">
-                    {isPaidPlan ? 'record_voice_over' : 'lock'}
-                  </span>
-                  {label}
-                  {!isPaidPlan && (
-                    <Link href="/pricing" className="text-primary/70 hover:text-primary transition-colors normal-case font-normal tracking-normal text-[0.55rem]">
-                      &nbsp;upgrade
-                    </Link>
-                  )}
-                </label>
-                <div className="relative">
-                  <select
-                    id={id}
-                    className="w-full bg-surface-container-low ghost-border rounded-xl px-3 py-2.5 text-xs text-on-surface focus:ring-1 focus:ring-primary outline-none appearance-none disabled:opacity-50 cursor-pointer"
-                    value={value}
-                    onChange={(e) => set(e.target.value)}
-                    disabled={loading || !isPaidPlan}
-                  >
-                    {voices.map((v) => <option key={v}>{v}</option>)}
-                  </select>
-                  <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-xs pointer-events-none text-on-surface-variant/50" aria-hidden="true">
-                    expand_more
-                  </span>
-                </div>
+          <div className="space-y-3">
+            {/* Host A picker */}
+            <div className="space-y-1.5">
+              <p className="text-[0.6rem] uppercase tracking-[0.1em] font-bold text-on-surface-variant/70 flex items-center gap-1">
+                <span className="material-symbols-outlined text-xs" aria-hidden="true">record_voice_over</span>
+                Host A
+                {!isPaidPlan && (
+                  <Link href="/pricing" className="text-primary/70 hover:text-primary ml-1 normal-case font-normal tracking-normal text-[0.55rem]">
+                    upgrade to choose
+                  </Link>
+                )}
+              </p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {ALL_VOICES.filter(v => v.slot === 'a').map((v) => {
+                  const locked = !allowedVoices.a.includes(v.name);
+                  const active = voiceA === v.name;
+                  return (
+                    <button
+                      key={v.name}
+                      onClick={() => !locked && setVoiceA(v.name)}
+                      disabled={loading || locked}
+                      title={locked ? 'Upgrade to unlock this voice' : v.desc}
+                      className={`relative flex flex-col items-start px-2.5 py-2 rounded-xl border text-left transition-all ${
+                        locked
+                          ? 'ghost-border opacity-40 cursor-not-allowed'
+                          : active
+                            ? 'bg-primary/10 border-primary/50 text-primary'
+                            : 'ghost-border text-on-surface-variant hover:border-outline hover:text-on-surface'
+                      }`}
+                    >
+                      {locked && (
+                        <span className="absolute top-1.5 right-1.5 material-symbols-outlined text-[10px] text-on-surface-variant/50" aria-hidden="true">lock</span>
+                      )}
+                      <span className="text-[0.6rem] font-bold leading-tight">
+                        {v.name.split(' (')[0]}
+                      </span>
+                      <span className="text-[0.5rem] opacity-60 leading-tight mt-0.5">{v.desc}</span>
+                    </button>
+                  );
+                })}
               </div>
-            ))}
+            </div>
+            {/* Host B picker */}
+            <div className="space-y-1.5">
+              <p className="text-[0.6rem] uppercase tracking-[0.1em] font-bold text-on-surface-variant/70 flex items-center gap-1">
+                <span className="material-symbols-outlined text-xs" aria-hidden="true">record_voice_over</span>
+                Host B
+              </p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {ALL_VOICES.filter(v => v.slot === 'b').map((v) => {
+                  const locked = !allowedVoices.b.includes(v.name);
+                  const active = voiceB === v.name;
+                  return (
+                    <button
+                      key={v.name}
+                      onClick={() => !locked && setVoiceB(v.name)}
+                      disabled={loading || locked}
+                      title={locked ? 'Upgrade to unlock this voice' : v.desc}
+                      className={`relative flex flex-col items-start px-2.5 py-2 rounded-xl border text-left transition-all ${
+                        locked
+                          ? 'ghost-border opacity-40 cursor-not-allowed'
+                          : active
+                            ? 'bg-primary/10 border-primary/50 text-primary'
+                            : 'ghost-border text-on-surface-variant hover:border-outline hover:text-on-surface'
+                      }`}
+                    >
+                      {locked && (
+                        <span className="absolute top-1.5 right-1.5 material-symbols-outlined text-[10px] text-on-surface-variant/50" aria-hidden="true">lock</span>
+                      )}
+                      <span className="text-[0.6rem] font-bold leading-tight">
+                        {v.name.split(' (')[0]}
+                      </span>
+                      <span className="text-[0.5rem] opacity-60 leading-tight mt-0.5">{v.desc}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
 

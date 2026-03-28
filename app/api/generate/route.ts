@@ -38,10 +38,17 @@ const TURNS_FOR_DURATION: Record<number, number> = { 1: 6, 2: 10, 3: 16 };
 
 /** Expanded tone instructions for richer prompting */
 const TONE_PROMPT: Record<string, string> = {
-  Professional:    'formal, concise, and executive-ready — use precise language and structured points',
-  Conversational:  'casual and friendly, like two colleagues chatting over coffee — warm, accessible, engaging',
-  Debate:          'two contrasting viewpoints — Host A argues strongly FOR the topic, Host B argues strongly AGAINST; be direct and sharp',
-  Summary:         'ultra-brief key takeaways only — each turn is one punchy, standalone sentence',
+  Professional:
+    'a sharp executive briefing between two analysts. Host A focuses on data, evidence, and specific facts from the article. Host B draws out the strategic implications and broader impact. Reference exact numbers, quotes, or findings from the article. No filler phrases. Speak naturally but with discipline — like a tightly produced CEO podcast. Make each host sound distinct: Host A is analytical and precise, Host B is strategic and forward-looking.',
+
+  Conversational:
+    'two engaged friends reacting to something they both just read. They reference each other\'s points — "wait, but what you said about X..." — express genuine surprise at surprising facts, push back gently, and bring their own perspective. Include one moment where something from the article actually catches them off-guard. Deeply tied to the article\'s specific content. Each host sounds like a real person: Host A is curious and optimistic, Host B is a bit more skeptical and questioning.',
+
+  Debate:
+    'a structured live intellectual debate. Host A builds a clear case FOR the article\'s main argument, citing its specific evidence and data. Host B challenges each claim with direct counterpoints — alternative interpretations, what the article overlooked, or flaws in the reasoning. They address each other directly: "Your point about X ignores the fact that..." It should feel like a real sparring match, not two separate monologues. Host A is persuasive and confident; Host B is incisive and critical.',
+
+  Summary:
+    'a crisp, no-filler briefing covering only the 3-5 most important insights from the article. Each dialogue turn is one standalone insight — punchy, clear, and immediately useful. No intro, no opinions, no padding. Just the essential value a busy reader needs, delivered in natural spoken form. Host A surfaces the insights; Host B adds a one-sentence "so what" for each.',
 };
 
 const VOICE_IDS: Record<string, string> = {
@@ -248,8 +255,8 @@ export async function POST(req: NextRequest) {
     const toneInstruction = TONE_PROMPT[tone] ?? `${tone} in style`;
     const isHinglish = language === 'Hinglish';
     const languageInstruction = isHinglish
-      ? `Write naturally in Hinglish — the mixed Hindi-English spoken in Indian cities. Use Devanagari script inline for Hindi words/phrases (e.g. "यह point बहुत important है"). Keep it conversational, not translated.`
-      : `Write in clear, natural English.`;
+      ? `Write in natural Hinglish — the casual code-switching style that urban Indians use on podcasts and YouTube. Keep it 80-85% English with a natural sprinkling of Hindi expressions: yaar, bhai, matlab, seedha baat, accha, bilkul, ekdum, arre, sahi mein, etc. Do NOT use Devanagari script. Do NOT translate English sentences into Hindi. Do NOT write full Hindi. Just speak like a sharp IIT or startup professional would on a casual call — predominantly English with natural Hindi flavour that any Indian urban audience would instantly recognise and enjoy.`
+      : `Write in clear, natural, globally accessible English. No jargon, no filler — language that anyone anywhere can follow easily.`;
     const indianExampleInstruction =
       tone === 'Conversational'
         ? `Include at least one relatable everyday analogy — something familiar to urban Indian professionals, such as ordering on Swiggy, an IPL match moment, a WhatsApp group situation, or a Mumbai/Bangalore commute.`
@@ -268,12 +275,19 @@ export async function POST(req: NextRequest) {
             },
             {
               role: 'user',
-              content: `Write a ${toneInstruction} podcast dialogue between Host A and Host B about this article.
+              content: `Write a podcast dialogue styled as ${toneInstruction}
+
 ${languageInstruction}
 ${indianExampleInstruction}
-${factsContext}Output a JSON array of exactly ${turnCount} objects, alternating speakers starting with A.
-Each object: {"speaker":"A","text":"..."} or {"speaker":"B","text":"..."}.
-Each "text" is 1–3 natural spoken sentences that directly reference specific facts from the article. Do not be generic.
+${factsContext}
+Rules:
+- Output a JSON array of exactly ${turnCount} objects, strictly alternating A then B then A... starting with A.
+- Each object: {"speaker":"A","text":"..."} or {"speaker":"B","text":"..."}
+- Each "text" = 1–3 natural spoken sentences. Reference specific facts, quotes, or data from the article — never be generic.
+- Hosts must react to each other, not deliver independent monologues. Use phrases like "right, and what's interesting about that is...", "but hold on...", "exactly — and that connects to..."
+- Do NOT start every turn with the other host's name.
+- Output ONLY the JSON array — no markdown, no explanation, nothing else.
+
 Article: ${articleText}`,
             },
           ],
