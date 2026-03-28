@@ -1,0 +1,19 @@
+
+# dependencies
+node_modules/
+
+# build output
+.next/
+out/
+
+# env files — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# clerk configuration (can include secrets)
+/.clerk/
+
+# misc
+.DS_Store
+*.log

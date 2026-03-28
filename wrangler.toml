@@ -1,0 +1,14 @@
+name = "voicedrop"
+main = "src/index.ts"
+compatibility_date = "2025-03-28"
+compatibility_flags = ["nodejs_compat"]
+
+assets = { directory = "./public" }
+
+[ai]
+binding = "AI"
+
+# Set your ElevenLabs key before deploying:
+#   npx wrangler secret put ELEVENLABS_API_KEY
+# For local dev, create a .dev.vars file:
+#   ELEVENLABS_API_KEY=your_key_here
