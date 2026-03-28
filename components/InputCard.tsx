@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { SignInButton, SignUpButton, useUser } from '@clerk/nextjs';
+import { SignInButton, SignUpButton, useAuth } from '@clerk/nextjs';
 import { PodcastData } from '@/types';
 import { PLAN_LIMITS, PLAN_VOICES, type PlanId } from '@/lib/plans';
 
@@ -17,8 +17,13 @@ type ErrorKind =
   | null;
 
 export default function InputCard({ onGenerate }: InputCardProps) {
-  const { user } = useUser();
-  const plan = ((user?.publicMetadata?.plan as string) ?? 'free') as PlanId;
+  const { has } = useAuth();
+  // Resolve plan from Clerk Billing subscription (matches Clerk Dashboard plan slugs)
+  const plan: PlanId =
+    has?.({ plan: 'enterprise' }) ? 'enterprise' :
+    has?.({ plan: 'pro' })        ? 'pro' :
+    has?.({ plan: 'starter' })    ? 'starter' :
+    'free';
   const allowedVoices = PLAN_VOICES[plan] ?? PLAN_VOICES.free;
   const isPaidPlan = plan !== 'free';
 

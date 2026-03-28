@@ -14,7 +14,12 @@ export interface Plan {
   features: string[];
   cta: string;
   highlighted: boolean;
-  stripePriceId: string | null;  // null for free & enterprise
+  /**
+   * The slug you set when creating the plan in the Clerk Dashboard
+   * (Billing → Subscription plans → plan slug field).
+   * Used with has({ plan: clerkPlanSlug }) for feature gating.
+   */
+  clerkPlanSlug: string;
 }
 
 // Voices available per plan tier
@@ -53,7 +58,7 @@ export const PLANS: Plan[] = [
     ],
     cta: 'Get Started Free',
     highlighted: false,
-    stripePriceId: null,
+    clerkPlanSlug: 'free',
   },
   {
     id: 'starter',
@@ -76,7 +81,7 @@ export const PLANS: Plan[] = [
     ],
     cta: 'Start Creating',
     highlighted: false,
-    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER ?? null,
+    clerkPlanSlug: 'starter',
   },
   {
     id: 'pro',
@@ -101,7 +106,7 @@ export const PLANS: Plan[] = [
     ],
     cta: 'Go Pro',
     highlighted: true,
-    stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO ?? null,
+    clerkPlanSlug: 'pro',
   },
   {
     id: 'enterprise',
@@ -126,6 +131,6 @@ export const PLANS: Plan[] = [
     ],
     cta: 'Contact Us',
     highlighted: false,
-    stripePriceId: null,
+    clerkPlanSlug: 'enterprise',
   },
 ];
