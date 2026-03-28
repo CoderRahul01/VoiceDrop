@@ -8,6 +8,7 @@ import InputCard from '@/components/InputCard';
 import PlayerCard from '@/components/PlayerCard';
 import TranscriptPreview from '@/components/TranscriptPreview';
 import Footer from '@/components/Footer';
+import WelcomeModal from '@/components/WelcomeModal';
 
 export default function Home() {
   const [podcastData, setPodcastData] = useState<PodcastData | null>(null);
@@ -15,6 +16,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans selection:bg-primary selection:text-on-primary">
+      <WelcomeModal />
       <TopAppBar />
       
       <main className="pt-28 px-4 pb-12 max-w-2xl mx-auto space-y-8 flex-grow">

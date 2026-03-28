@@ -65,14 +65,24 @@ export default function PricingPage() {
               cssLayerName: 'clerk',
               variables: {
                 colorPrimary: '#68dbae',
-                colorBackground: '#1b211e',
+                colorBackground: '#171d1a',
                 colorText: '#e8f5f0',
-                colorTextSecondary: '#8eada1',
+                colorTextSecondary: '#bccac1',
                 colorNeutral: '#2e3d36',
                 colorInputBackground: '#232e28',
                 colorInputText: '#e8f5f0',
                 borderRadius: '0.75rem',
                 fontFamily: 'var(--font-inter), sans-serif',
+                fontSize: '14px',
+              },
+              elements: {
+                pricingTable: 'bg-transparent',
+                pricingTableCard: 'bg-[#171d1a] border border-[rgba(61,73,67,0.5)] text-[#e8f5f0]',
+                pricingTableCardTitle: 'text-[#e8f5f0] font-extrabold',
+                pricingTableCardDescription: 'text-[#8eada1]',
+                pricingTableCardPrice: 'text-[#e8f5f0]',
+                pricingTableCardFeatureItem: 'text-[#bccac1]',
+                pricingTableCardCta: 'font-bold',
               },
             }}
           />

@@ -61,3 +61,131 @@ body {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
+/* ── Clerk Component Dark-Theme Overrides ─────────────────────────────────── */
+@layer clerk {
+  /* Modal / card backgrounds */
+  .cl-card,
+  .cl-modalContent,
+  .cl-signIn-root,
+  .cl-signUp-root {
+    background-color: #1b211e !important;
+    border: 0.5px solid rgba(61,73,67,0.4) !important;
+    color: #e8f5f0 !important;
+  }
+
+  /* All text inside Clerk components */
+  .cl-headerTitle,
+  .cl-headerSubtitle,
+  .cl-formFieldLabel,
+  .cl-identityPreviewText,
+  .cl-dividerText,
+  .cl-footerActionText,
+  .cl-alternativeMethodsBlockButton__emailCode,
+  .cl-internal-wkkc3b {
+    color: #e8f5f0 !important;
+  }
+
+  /* Inputs */
+  .cl-formFieldInput {
+    background-color: #232e28 !important;
+    border-color: rgba(61,73,67,0.6) !important;
+    color: #e8f5f0 !important;
+  }
+  .cl-formFieldInput:focus {
+    border-color: #68dbae !important;
+    box-shadow: 0 0 0 2px rgba(104,219,174,0.2) !important;
+  }
+
+  /* Primary action buttons */
+  .cl-formButtonPrimary,
+  .cl-button__signIn,
+  .cl-button__signUp {
+    background-color: #68dbae !important;
+    color: #003827 !important;
+    font-weight: 700 !important;
+  }
+  .cl-formButtonPrimary:hover {
+    opacity: 0.9 !important;
+  }
+
+  /* UserButton dropdown */
+  .cl-userButtonPopoverCard {
+    background-color: #1b211e !important;
+    border: 0.5px solid rgba(61,73,67,0.4) !important;
+  }
+  .cl-userButtonPopoverActionButtonText,
+  .cl-userButtonPopoverFooterText {
+    color: #e8f5f0 !important;
+  }
+  .cl-userButtonPopoverActionButton:hover {
+    background-color: #252b28 !important;
+  }
+
+  /* PricingTable overrides */
+  .cl-pricingTable {
+    background: transparent !important;
+  }
+  .cl-pricingTableCard {
+    background-color: #171d1a !important;
+    border: 0.5px solid rgba(61,73,67,0.5) !important;
+    border-radius: 0.75rem !important;
+    color: #e8f5f0 !important;
+  }
+  /* Highlighted / popular card */
+  .cl-pricingTableCard[data-popular="true"],
+  .cl-pricingTableCard--popular {
+    background-color: #1b211e !important;
+    border-color: rgba(104,219,174,0.5) !important;
+    box-shadow: 0 0 0 1px rgba(104,219,174,0.3) !important;
+  }
+  .cl-pricingTableCardTitle {
+    color: #e8f5f0 !important;
+    font-weight: 800 !important;
+  }
+  .cl-pricingTableCardDescription,
+  .cl-pricingTableCardSubtitle {
+    color: #8eada1 !important;
+  }
+  .cl-pricingTableCardPrice,
+  .cl-pricingTableCardPriceAmount,
+  .cl-pricingTableCardPriceAmountOuter {
+    color: #e8f5f0 !important;
+  }
+  .cl-pricingTableCardPricePeriod {
+    color: #8eada1 !important;
+  }
+  .cl-pricingTableCardFeatureItem,
+  .cl-pricingTableCardFeature {
+    color: #bccac1 !important;
+  }
+  /* Feature check icon */
+  .cl-pricingTableCardFeatureIcon {
+    color: #68dbae !important;
+  }
+  /* CTA buttons on plan cards */
+  .cl-pricingTableCardCta .cl-button,
+  .cl-pricingTableCardCta button {
+    background-color: #68dbae !important;
+    color: #003827 !important;
+    font-weight: 700 !important;
+    border-radius: 0.75rem !important;
+  }
+  .cl-pricingTableCardCta .cl-button:hover,
+  .cl-pricingTableCardCta button:hover {
+    opacity: 0.9 !important;
+  }
+  /* "Current plan" / "Free" button variant */
+  .cl-pricingTableCardCta .cl-button--outline,
+  .cl-pricingTableCardCta button[data-variant="outline"] {
+    background-color: transparent !important;
+    border: 1px solid rgba(104,219,174,0.5) !important;
+    color: #68dbae !important;
+  }
+  /* Badge / tag on popular plan */
+  .cl-badge,
+  .cl-pricingTableCardBadge {
+    background-color: rgba(104,219,174,0.15) !important;
+    color: #68dbae !important;
+    border-color: rgba(104,219,174,0.3) !important;
+  }
+}
