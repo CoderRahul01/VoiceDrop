@@ -1,10 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { SignInButton, SignUpButton, useAuth, useUser } from '@clerk/nextjs';
-import { PodcastData } from '@/types';
-import { ALL_VOICES, PLAN_LIMITS, PLAN_MAX_DURATION, PLAN_VOICES, type PlanId } from '@/lib/plans';
+import type { EntitlementsData, PodcastData, ResolvedSelections } from '@/types';
+import {
+  ALL_VOICES,
+  DURATION_OPTIONS,
+  estimateTokenChargeForDuration,
+  getPlanDefinition,
+  getPlanEntitlements,
+  resolvePlan,
+  TONES,
+  type Language,
+  type PlanId,
+  type Tone,
+} from '@/lib/plans';
 
 interface InputCardProps {
   onGenerate: (data: PodcastData) => void;
@@ -12,38 +23,22 @@ interface InputCardProps {
 
 type ErrorKind =
   | { type: 'auth' }
-  | { type: 'limit'; plan: string; limit: number }
+  | { type: 'limit'; plan: PlanId; tokenBudget: number; tokensRemaining: number }
   | { type: 'message'; text: string }
   | null;
 
-const TONES = ['Professional', 'Conversational', 'Debate', 'Summary'] as const;
-type Tone = typeof TONES[number];
-type Language = 'English' | 'Hinglish';
-
 const TONE_META: Record<Tone, { icon: string; desc: string }> = {
-  Professional:   { icon: 'business_center', desc: 'Formal, concise, executive-ready' },
+  Professional: { icon: 'business_center', desc: 'Formal, concise, executive-ready' },
   Conversational: { icon: 'forum', desc: 'Casual dialogue with relatable examples' },
-  Debate:         { icon: 'balance', desc: 'Two opposing views explored' },
-  Summary:        { icon: 'summarize', desc: 'Key takeaways only, ultra-short' },
+  Debate: { icon: 'balance', desc: 'Two opposing views explored' },
+  Summary: { icon: 'summarize', desc: 'Key takeaways only, ultra-short' },
 };
 
-const DURATION_OPTIONS: { value: 1 | 2 | 3; label: string }[] = [
-  { value: 1, label: '~1 min' },
-  { value: 2, label: '~2 min' },
-  { value: 3, label: '~3 min' },
-];
-
 export default function InputCard({ onGenerate }: InputCardProps) {
-  const { has } = useAuth();
+  const { has, isSignedIn } = useAuth();
   const { user } = useUser();
   const couponPlan = user?.publicMetadata?.couponPlan as string | undefined;
-  const plan: PlanId =
-    has?.({ plan: 'enterprise' }) || couponPlan === 'enterprise' ? 'enterprise' :
-    has?.({ plan: 'pro' })        || couponPlan === 'pro'        ? 'pro' :
-    has?.({ plan: 'starter' })    || couponPlan === 'starter'    ? 'starter' :
-    'free';
-  const allowedVoices = PLAN_VOICES[plan] ?? PLAN_VOICES.free;
-  const isPaidPlan = plan !== 'free';
+  const clientPlan = resolvePlan((params) => Boolean(has?.(params)), couponPlan);
 
   const [url, setUrl] = useState('');
   const [voiceA, setVoiceA] = useState('Sarah (Tech)');
@@ -52,14 +47,70 @@ export default function InputCard({ onGenerate }: InputCardProps) {
   const [language, setLanguage] = useState<Language>('English');
   const [duration, setDuration] = useState<1 | 2 | 3>(1);
   const [loading, setLoading] = useState(false);
-  const maxDurationAllowed = PLAN_MAX_DURATION[plan];
   const [errorKind, setErrorKind] = useState<ErrorKind>(null);
-  const [usage, setUsage] = useState<{ count: number; limit: number } | null>(null);
+  const [planState, setPlanState] = useState<EntitlementsData | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    fetch('/api/entitlements')
+      .then((res) => res.json())
+      .then((data: EntitlementsData) => {
+        if (!cancelled) setPlanState(data);
+      })
+      .catch(() => {
+        if (!cancelled) setPlanState(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isSignedIn, user?.id, couponPlan]);
+
+  const effectivePlan = planState?.plan ?? clientPlan;
+  const entitlements = planState?.entitlements ?? getPlanEntitlements(effectivePlan);
+  const planMeta = getPlanDefinition(effectivePlan);
+  const tokenBudget = planState?.tokenBudget ?? entitlements.monthlyTokenBudget;
+  const tokensUsed = planState?.tokensUsed ?? 0;
+  const tokensRemaining = planState?.tokensRemaining ?? tokenBudget;
+  const estimatedTokens = estimateTokenChargeForDuration(duration);
+  const insufficientTokens = isSignedIn && estimatedTokens > tokensRemaining;
+
+  useEffect(() => {
+    if (!entitlements.languages.includes(language)) setLanguage(entitlements.languages[0]);
+  }, [entitlements.languages, language]);
+
+  useEffect(() => {
+    if (!entitlements.durations.includes(duration)) setDuration(entitlements.durations[0]);
+  }, [entitlements.durations, duration]);
+
+  useEffect(() => {
+    if (!entitlements.tones.includes(tone)) setTone(entitlements.tones[0]);
+  }, [entitlements.tones, tone]);
+
+  useEffect(() => {
+    if (!entitlements.voices.a.includes(voiceA)) setVoiceA(entitlements.voices.a[0]);
+  }, [entitlements.voices.a, voiceA]);
+
+  useEffect(() => {
+    if (!entitlements.voices.b.includes(voiceB)) setVoiceB(entitlements.voices.b[0]);
+  }, [entitlements.voices.b, voiceB]);
+
+  const syncResolvedSelections = (resolved?: ResolvedSelections) => {
+    if (!resolved) return;
+    setLanguage(resolved.language);
+    setDuration(resolved.duration);
+    setTone(resolved.tone);
+    setVoiceA(resolved.voiceA);
+    setVoiceB(resolved.voiceB);
+  };
 
   const handleGenerate = async () => {
     if (!url) return;
+
     setLoading(true);
     setErrorKind(null);
+
     try {
       const res = await fetch('/api/generate', {
         method: 'POST',
@@ -67,17 +118,36 @@ export default function InputCard({ onGenerate }: InputCardProps) {
         body: JSON.stringify({ url, voiceA, voiceB, tone, language, duration }),
       });
       const data = await res.json();
+
       if (data.requiresAuth) {
         setErrorKind({ type: 'auth' });
-      } else if (data.limitReached) {
-        setErrorKind({ type: 'limit', plan: data.plan ?? 'free', limit: data.limit ?? PLAN_LIMITS.free });
+      } else if (data.tokenLimitReached) {
+        syncResolvedSelections(data.resolvedSelections);
+        setPlanState((prev) => ({
+          plan: (data.plan ?? prev?.plan ?? clientPlan) as PlanId,
+          entitlements: prev?.entitlements ?? entitlements,
+          tokenBudget: data.tokenBudget ?? prev?.tokenBudget ?? tokenBudget,
+          tokensUsed: data.tokensUsed ?? prev?.tokensUsed ?? tokensUsed,
+          tokensRemaining: data.tokensRemaining ?? prev?.tokensRemaining ?? tokensRemaining,
+        }));
+        setErrorKind({
+          type: 'limit',
+          plan: (data.plan ?? clientPlan) as PlanId,
+          tokenBudget: data.tokenBudget ?? tokenBudget,
+          tokensRemaining: data.tokensRemaining ?? 0,
+        });
       } else if (data.error) {
         setErrorKind({ type: 'message', text: data.error });
       } else {
-        if (data.usageCount !== undefined && data.limit !== undefined) {
-          setUsage({ count: data.usageCount, limit: data.limit });
-        }
-        onGenerate(data);
+        syncResolvedSelections(data.resolvedSelections);
+        setPlanState((prev) => ({
+          plan: data.plan ?? prev?.plan ?? clientPlan,
+          entitlements: prev?.entitlements ?? entitlements,
+          tokenBudget: data.tokenBudget ?? prev?.tokenBudget ?? tokenBudget,
+          tokensUsed: data.tokensUsed ?? prev?.tokensUsed ?? tokensUsed,
+          tokensRemaining: data.tokensRemaining ?? prev?.tokensRemaining ?? tokensRemaining,
+        }));
+        onGenerate(data as PodcastData);
       }
     } catch {
       setErrorKind({ type: 'message', text: 'Failed to connect to the generation service. Please try again.' });
@@ -86,47 +156,66 @@ export default function InputCard({ onGenerate }: InputCardProps) {
     }
   };
 
-  const remainingPodcasts = usage ? usage.limit - usage.count : null;
-
   return (
     <>
-      {/* Generation overlay */}
       {loading && (
         <div
           className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6"
           style={{ background: 'rgba(13,18,16,0.9)', backdropFilter: 'blur(12px)' }}
           aria-live="polite"
         >
-          <div className="relative w-16 h-16">
+          <div className="relative h-16 w-16">
             <div className="absolute inset-0 rounded-full border-[2px] border-primary/15" />
-            <div className="absolute inset-0 rounded-full border-[2px] border-t-primary border-r-transparent border-b-transparent border-l-transparent animate-spin" />
-            <div className="absolute inset-2 rounded-full bg-primary/8 flex items-center justify-center">
-              <span className="material-symbols-outlined text-primary text-xl" aria-hidden="true" style={{ fontVariationSettings: "'FILL' 1" }}>
+            <div className="absolute inset-0 animate-spin rounded-full border-[2px] border-l-transparent border-b-transparent border-t-primary border-r-transparent" />
+            <div className="absolute inset-2 flex items-center justify-center rounded-full bg-primary/8">
+              <span className="material-symbols-outlined text-xl text-primary" aria-hidden="true" style={{ fontVariationSettings: "'FILL' 1" }}>
                 podcasts
               </span>
             </div>
           </div>
-          <div className="text-center space-y-1.5">
-            <p className="text-[0.6875rem] uppercase tracking-[0.12em] font-bold text-primary">
+          <div className="space-y-1.5 text-center">
+            <p className="text-[0.6875rem] font-bold uppercase tracking-[0.12em] text-primary">
               Generating your podcast…
             </p>
-            <p className="text-on-surface-variant text-xs">Scripting → Voices → Stitching audio</p>
+            <p className="text-xs text-on-surface-variant">Scripting → Tokens → Voices → Stitching audio</p>
           </div>
         </div>
       )}
 
-      <div className="bg-surface-container ghost-border rounded-2xl p-5 space-y-5">
-        {/* URL input row */}
+      <div className="space-y-5 rounded-2xl bg-surface-container p-5 ghost-border">
+        <div className="rounded-xl bg-surface-container-low p-4 ghost-border">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[0.6rem] font-bold uppercase tracking-[0.1em] text-primary">Current access</p>
+              <h3 className="mt-1 text-sm font-bold text-on-surface">{planMeta.name} plan</h3>
+              <p className="text-xs text-on-surface-variant">{planMeta.tokenLabel} · {planMeta.audioQuality}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-[0.6rem] font-bold uppercase tracking-[0.1em] text-on-surface-variant/70">This episode</p>
+              <p className="text-sm font-bold text-on-surface">~{estimatedTokens} tokens</p>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-[0.7rem] text-on-surface-variant">
+            <span>{tokensRemaining} tokens left this month</span>
+            <span>·</span>
+            <span>{tokensUsed} used</span>
+            <span>·</span>
+            <Link href="/pricing" className="font-medium text-primary hover:underline underline-offset-2">
+              Upgrade unlocks more options
+            </Link>
+          </div>
+        </div>
+
         <div className="space-y-2">
-          <label htmlFor="article-url" className="text-[0.6rem] uppercase tracking-[0.1em] font-bold text-primary flex items-center gap-1.5">
+          <label htmlFor="article-url" className="flex items-center gap-1.5 text-[0.6rem] font-bold uppercase tracking-[0.1em] text-primary">
             <span className="material-symbols-outlined text-sm" aria-hidden="true">link</span>
             Article or blog URL
           </label>
           <div className="flex gap-2">
             <input
               id="article-url"
-              className="flex-grow bg-surface-container-low ghost-border rounded-xl px-4 py-3 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-primary outline-none transition-all"
-              placeholder="https://techcrunch.com/2026/…"
+              className="flex-grow rounded-xl bg-surface-container-low px-4 py-3 text-sm text-on-surface outline-none transition-all placeholder:text-on-surface-variant/40 focus:ring-1 focus:ring-primary ghost-border"
+              placeholder="https://techcrunch.com/2026/..."
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -135,118 +224,125 @@ export default function InputCard({ onGenerate }: InputCardProps) {
             />
             <button
               onClick={handleGenerate}
-              disabled={loading || !url}
-              className="bg-primary text-on-primary text-sm font-bold px-4 sm:px-5 py-3 rounded-xl hover:opacity-90 active:scale-95 transition-all flex items-center gap-1.5 whitespace-nowrap disabled:opacity-40 disabled:scale-100 disabled:cursor-not-allowed glow-primary flex-shrink-0"
+              disabled={loading || !url || insufficientTokens}
+              className="flex-shrink-0 whitespace-nowrap rounded-xl bg-primary px-4 py-3 text-sm font-bold text-on-primary transition-all hover:opacity-90 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:scale-100 glow-primary"
             >
-              <span className="hidden sm:inline">{loading ? 'Generating…' : 'Generate'}</span>
-              <span className="material-symbols-outlined text-base" aria-hidden="true" style={{ fontVariationSettings: "'FILL' 1" }}>
-                {loading ? 'sync' : 'bolt'}
-              </span>
+              {loading ? 'Generating…' : 'Generate'}
             </button>
           </div>
+          {insufficientTokens && (
+            <p className="flex items-center gap-1.5 text-xs font-medium text-red-400">
+              <span className="material-symbols-outlined text-sm" aria-hidden="true">lock</span>
+              This episode estimate is higher than your remaining monthly tokens.
+            </p>
+          )}
         </div>
 
-        {/* Language toggle */}
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-[0.6rem] uppercase tracking-[0.1em] font-bold text-on-surface-variant/70 flex-shrink-0">
+          <p className="flex-shrink-0 text-[0.6rem] font-bold uppercase tracking-[0.1em] text-on-surface-variant/70">
             Language
           </p>
           <div className="flex flex-wrap gap-2">
-            {(['English', 'Hinglish'] as Language[]).map((lang) => (
-              <button
-                key={lang}
-                onClick={() => setLanguage(lang)}
-                disabled={loading}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[0.65rem] font-bold uppercase tracking-wider transition-all border ${
-                  language === lang
-                    ? 'bg-primary/10 border-primary/50 text-primary'
-                    : 'ghost-border text-on-surface-variant hover:border-outline hover:text-on-surface'
-                }`}
-              >
-                <span>{lang === 'English' ? '🇬🇧' : '🇮🇳'}</span>
-                {lang}
-              </button>
-            ))}
+            {(['English', 'Hinglish'] as Language[]).map((lang) => {
+              const locked = !entitlements.languages.includes(lang);
+              const active = language === lang;
+              return (
+                <button
+                  key={lang}
+                  onClick={() => !locked && setLanguage(lang)}
+                  disabled={loading || locked}
+                  title={locked ? 'Upgrade to unlock this language' : undefined}
+                  className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-wider transition-all ${
+                    locked
+                      ? 'cursor-not-allowed ghost-border text-on-surface-variant/30'
+                      : active
+                        ? 'border-primary/50 bg-primary/10 text-primary'
+                        : 'ghost-border text-on-surface-variant hover:border-outline hover:text-on-surface'
+                  }`}
+                >
+                  {locked && <span className="material-symbols-outlined text-[10px]" aria-hidden="true">lock</span>}
+                  <span>{lang === 'English' ? '🇬🇧' : '🇮🇳'}</span>
+                  {lang}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Duration pills */}
         <div className="flex flex-wrap items-center gap-2">
-          <p className="text-[0.6rem] uppercase tracking-[0.1em] font-bold text-on-surface-variant/70 flex-shrink-0">
+          <p className="flex-shrink-0 text-[0.6rem] font-bold uppercase tracking-[0.1em] text-on-surface-variant/70">
             Length
           </p>
           <div className="flex flex-wrap gap-2">
-            {DURATION_OPTIONS.map(({ value, label }) => {
-              const locked = value > maxDurationAllowed;
+            {DURATION_OPTIONS.map((value) => {
+              const locked = !entitlements.durations.includes(value);
+              const active = duration === value;
               return (
                 <button
                   key={value}
                   onClick={() => !locked && setDuration(value)}
                   disabled={loading || locked}
-                  title={locked ? `Upgrade to unlock ${value}-min podcasts` : undefined}
-                  className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-[0.65rem] font-bold uppercase tracking-wider transition-all border ${
+                  title={locked ? `Upgrade to unlock ${value}-minute podcasts` : undefined}
+                  className={`flex items-center gap-1 rounded-xl border px-3 py-1.5 text-[0.65rem] font-bold uppercase tracking-wider transition-all ${
                     locked
-                      ? 'ghost-border text-on-surface-variant/30 cursor-not-allowed'
-                      : duration === value
-                        ? 'bg-primary/10 border-primary/50 text-primary'
+                      ? 'cursor-not-allowed ghost-border text-on-surface-variant/30'
+                      : active
+                        ? 'border-primary/50 bg-primary/10 text-primary'
                         : 'ghost-border text-on-surface-variant hover:border-outline hover:text-on-surface'
                   }`}
                 >
-                  {locked && (
-                    <span className="material-symbols-outlined text-[10px]" aria-hidden="true">lock</span>
-                  )}
-                  {label}
+                  {locked && <span className="material-symbols-outlined text-[10px]" aria-hidden="true">lock</span>}
+                  ~{value} min
                 </button>
               );
             })}
           </div>
-          {maxDurationAllowed < 3 && (
-            <Link href="/pricing" className="text-[0.6rem] text-primary/70 hover:text-primary transition-colors ml-auto">
-              Upgrade for longer
-            </Link>
-          )}
         </div>
 
-        {/* Tone selector — pill buttons */}
         <div className="space-y-2">
-          <p className="text-[0.6rem] uppercase tracking-[0.1em] font-bold text-on-surface-variant/70 flex items-center gap-1.5">
+          <p className="flex items-center gap-1.5 text-[0.6rem] font-bold uppercase tracking-[0.1em] text-on-surface-variant/70">
             <span className="material-symbols-outlined text-sm" aria-hidden="true">tune</span>
             Podcast tone
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {TONES.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTone(t)}
-                disabled={loading}
-                className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border text-center transition-all ${
-                  tone === t
-                    ? 'bg-primary/10 border-primary/50 text-primary'
-                    : 'ghost-border text-on-surface-variant hover:border-outline hover:text-on-surface'
-                }`}
-              >
-                <span
-                  className="material-symbols-outlined text-xl"
-                  aria-hidden="true"
-                  style={{ fontVariationSettings: tone === t ? "'FILL' 1" : "'FILL' 0" }}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {TONES.map((option) => {
+              const locked = !entitlements.tones.includes(option);
+              const active = tone === option;
+              return (
+                <button
+                  key={option}
+                  onClick={() => !locked && setTone(option)}
+                  disabled={loading || locked}
+                  title={locked ? 'Upgrade to unlock this tone' : TONE_META[option].desc}
+                  className={`relative flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-center transition-all ${
+                    locked
+                      ? 'cursor-not-allowed ghost-border text-on-surface-variant/35'
+                      : active
+                        ? 'border-primary/50 bg-primary/10 text-primary'
+                        : 'ghost-border text-on-surface-variant hover:border-outline hover:text-on-surface'
+                  }`}
                 >
-                  {TONE_META[t].icon}
-                </span>
-                <span className="text-[0.6rem] font-bold uppercase tracking-wider leading-none">{t}</span>
-              </button>
-            ))}
+                  {locked && (
+                    <span className="absolute right-2 top-2 material-symbols-outlined text-[10px]" aria-hidden="true">lock</span>
+                  )}
+                  <span className="material-symbols-outlined text-xl" aria-hidden="true" style={{ fontVariationSettings: active ? "'FILL' 1" : "'FILL' 0" }}>
+                    {TONE_META[option].icon}
+                  </span>
+                  <span className="text-[0.6rem] font-bold uppercase tracking-wider leading-none">{option}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* Voice picker — auto-matched for Conversational, visual grid for all other tones */}
         {tone === 'Conversational' ? (
-          <div className="flex items-center gap-2.5 py-2.5 px-3 bg-surface-container-low ghost-border rounded-xl">
-            <span className="material-symbols-outlined text-base text-primary flex-shrink-0" aria-hidden="true" style={{ fontVariationSettings: "'FILL' 1" }}>
+          <div className="flex items-center gap-2.5 rounded-xl bg-surface-container-low px-3 py-2.5 ghost-border">
+            <span className="material-symbols-outlined flex-shrink-0 text-base text-primary" aria-hidden="true" style={{ fontVariationSettings: "'FILL' 1" }}>
               auto_awesome
             </span>
             <div className="min-w-0">
-              <p className="text-[0.6rem] uppercase tracking-widest font-bold text-primary">Auto-matched voices</p>
-              <p className="text-xs text-on-surface-variant mt-0.5">
+              <p className="text-[0.6rem] font-bold uppercase tracking-widest text-primary">Auto-matched voices</p>
+              <p className="mt-0.5 text-xs text-on-surface-variant">
                 {language === 'Hinglish'
                   ? '🇮🇳 Akshita + Vidya — natural Hindi speakers'
                   : '🇬🇧 Anya + Andrew — warm conversational pair'}
@@ -255,78 +351,68 @@ export default function InputCard({ onGenerate }: InputCardProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            {/* Host A picker */}
             <div className="space-y-1.5">
-              <p className="text-[0.6rem] uppercase tracking-[0.1em] font-bold text-on-surface-variant/70 flex items-center gap-1">
+              <p className="flex items-center gap-1 text-[0.6rem] font-bold uppercase tracking-[0.1em] text-on-surface-variant/70">
                 <span className="material-symbols-outlined text-xs" aria-hidden="true">record_voice_over</span>
                 Host A
-                {!isPaidPlan && (
-                  <Link href="/pricing" className="text-primary/70 hover:text-primary ml-1 normal-case font-normal tracking-normal text-[0.55rem]">
-                    upgrade to choose
-                  </Link>
-                )}
               </p>
               <div className="grid grid-cols-3 gap-1.5">
-                {ALL_VOICES.filter(v => v.slot === 'a').map((v) => {
-                  const locked = !allowedVoices.a.includes(v.name);
-                  const active = voiceA === v.name;
+                {ALL_VOICES.filter((voice) => voice.slot === 'a').map((voice) => {
+                  const locked = !entitlements.voices.a.includes(voice.name);
+                  const active = voiceA === voice.name;
                   return (
                     <button
-                      key={v.name}
-                      onClick={() => !locked && setVoiceA(v.name)}
+                      key={voice.name}
+                      onClick={() => !locked && setVoiceA(voice.name)}
                       disabled={loading || locked}
-                      title={locked ? 'Upgrade to unlock this voice' : v.desc}
-                      className={`relative flex flex-col items-start px-2.5 py-2 rounded-xl border text-left transition-all ${
+                      title={locked ? 'Upgrade to unlock this voice' : voice.desc}
+                      className={`relative flex flex-col items-start rounded-xl border px-2.5 py-2 text-left transition-all ${
                         locked
-                          ? 'ghost-border opacity-40 cursor-not-allowed'
+                          ? 'cursor-not-allowed ghost-border opacity-40'
                           : active
-                            ? 'bg-primary/10 border-primary/50 text-primary'
+                            ? 'border-primary/50 bg-primary/10 text-primary'
                             : 'ghost-border text-on-surface-variant hover:border-outline hover:text-on-surface'
                       }`}
                     >
                       {locked && (
-                        <span className="absolute top-1.5 right-1.5 material-symbols-outlined text-[10px] text-on-surface-variant/50" aria-hidden="true">lock</span>
+                        <span className="absolute right-1.5 top-1.5 material-symbols-outlined text-[10px] text-on-surface-variant/50" aria-hidden="true">lock</span>
                       )}
-                      <span className="text-[0.6rem] font-bold leading-tight">
-                        {v.name.split(' (')[0]}
-                      </span>
-                      <span className="text-[0.5rem] opacity-60 leading-tight mt-0.5">{v.desc}</span>
+                      <span className="text-[0.6rem] font-bold leading-tight">{voice.name.split(' (')[0]}</span>
+                      <span className="mt-0.5 text-[0.5rem] leading-tight opacity-60">{voice.desc}</span>
                     </button>
                   );
                 })}
               </div>
             </div>
-            {/* Host B picker */}
+
             <div className="space-y-1.5">
-              <p className="text-[0.6rem] uppercase tracking-[0.1em] font-bold text-on-surface-variant/70 flex items-center gap-1">
+              <p className="flex items-center gap-1 text-[0.6rem] font-bold uppercase tracking-[0.1em] text-on-surface-variant/70">
                 <span className="material-symbols-outlined text-xs" aria-hidden="true">record_voice_over</span>
                 Host B
               </p>
               <div className="grid grid-cols-3 gap-1.5">
-                {ALL_VOICES.filter(v => v.slot === 'b').map((v) => {
-                  const locked = !allowedVoices.b.includes(v.name);
-                  const active = voiceB === v.name;
+                {ALL_VOICES.filter((voice) => voice.slot === 'b').map((voice) => {
+                  const locked = !entitlements.voices.b.includes(voice.name);
+                  const active = voiceB === voice.name;
                   return (
                     <button
-                      key={v.name}
-                      onClick={() => !locked && setVoiceB(v.name)}
+                      key={voice.name}
+                      onClick={() => !locked && setVoiceB(voice.name)}
                       disabled={loading || locked}
-                      title={locked ? 'Upgrade to unlock this voice' : v.desc}
-                      className={`relative flex flex-col items-start px-2.5 py-2 rounded-xl border text-left transition-all ${
+                      title={locked ? 'Upgrade to unlock this voice' : voice.desc}
+                      className={`relative flex flex-col items-start rounded-xl border px-2.5 py-2 text-left transition-all ${
                         locked
-                          ? 'ghost-border opacity-40 cursor-not-allowed'
+                          ? 'cursor-not-allowed ghost-border opacity-40'
                           : active
-                            ? 'bg-primary/10 border-primary/50 text-primary'
+                            ? 'border-primary/50 bg-primary/10 text-primary'
                             : 'ghost-border text-on-surface-variant hover:border-outline hover:text-on-surface'
                       }`}
                     >
                       {locked && (
-                        <span className="absolute top-1.5 right-1.5 material-symbols-outlined text-[10px] text-on-surface-variant/50" aria-hidden="true">lock</span>
+                        <span className="absolute right-1.5 top-1.5 material-symbols-outlined text-[10px] text-on-surface-variant/50" aria-hidden="true">lock</span>
                       )}
-                      <span className="text-[0.6rem] font-bold leading-tight">
-                        {v.name.split(' (')[0]}
-                      </span>
-                      <span className="text-[0.5rem] opacity-60 leading-tight mt-0.5">{v.desc}</span>
+                      <span className="text-[0.6rem] font-bold leading-tight">{voice.name.split(' (')[0]}</span>
+                      <span className="mt-0.5 text-[0.5rem] leading-tight opacity-60">{voice.desc}</span>
                     </button>
                   );
                 })}
@@ -335,21 +421,20 @@ export default function InputCard({ onGenerate }: InputCardProps) {
           </div>
         )}
 
-        {/* Error states */}
         {errorKind?.type === 'auth' && (
-          <div className="p-4 bg-surface-container-low ghost-border rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-            <p className="text-on-surface text-sm font-medium flex items-center gap-2">
-              <span className="material-symbols-outlined text-primary text-base" aria-hidden="true">lock</span>
+          <div className="animate-in slide-in-from-top-2 flex flex-col items-start justify-between gap-3 rounded-xl bg-surface-container-low p-4 ghost-border duration-300 sm:flex-row sm:items-center">
+            <p className="flex items-center gap-2 text-sm font-medium text-on-surface">
+              <span className="material-symbols-outlined text-base text-primary" aria-hidden="true">lock</span>
               Sign in to generate podcasts — it&apos;s free
             </p>
-            <div className="flex gap-2 flex-shrink-0">
+            <div className="flex flex-shrink-0 gap-2">
               <SignInButton mode="modal">
-                <button className="text-[0.6875rem] uppercase tracking-wider font-bold text-on-surface-variant hover:text-primary transition-colors px-3 py-1.5 ghost-border rounded-lg">
+                <button className="rounded-lg px-3 py-1.5 text-[0.6875rem] font-bold uppercase tracking-wider text-on-surface-variant transition-colors hover:text-primary ghost-border">
                   Sign in
                 </button>
               </SignInButton>
               <SignUpButton mode="modal">
-                <button className="bg-primary text-on-primary text-[0.6875rem] uppercase tracking-wider font-bold px-4 py-1.5 rounded-lg hover:opacity-90 transition-all">
+                <button className="rounded-lg bg-primary px-4 py-1.5 text-[0.6875rem] font-bold uppercase tracking-wider text-on-primary transition-all hover:opacity-90">
                   Start free
                 </button>
               </SignUpButton>
@@ -358,17 +443,19 @@ export default function InputCard({ onGenerate }: InputCardProps) {
         )}
 
         {errorKind?.type === 'limit' && (
-          <div className="p-4 bg-surface-container-low ghost-border rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="animate-in slide-in-from-top-2 flex flex-col items-start justify-between gap-3 rounded-xl bg-surface-container-low p-4 ghost-border duration-300 sm:flex-row sm:items-center">
             <div>
-              <p className="text-on-surface text-sm font-medium flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-base" aria-hidden="true">upgrade</span>
-                {errorKind.plan} limit reached ({errorKind.limit}/{errorKind.limit} used)
+              <p className="flex items-center gap-2 text-sm font-medium text-on-surface">
+                <span className="material-symbols-outlined text-base text-primary" aria-hidden="true">upgrade</span>
+                {getPlanDefinition(errorKind.plan).name} tokens are nearly exhausted
               </p>
-              <p className="text-on-surface-variant text-xs mt-0.5">Resets on the 1st of next month</p>
+              <p className="mt-0.5 text-xs text-on-surface-variant">
+                {errorKind.tokensRemaining} tokens left out of {errorKind.tokenBudget} this month.
+              </p>
             </div>
             <Link
               href="/pricing"
-              className="bg-primary text-on-primary text-[0.6875rem] uppercase tracking-wider font-bold px-4 py-1.5 rounded-lg hover:opacity-90 transition-all flex-shrink-0"
+              className="flex-shrink-0 rounded-lg bg-primary px-4 py-1.5 text-[0.6875rem] font-bold uppercase tracking-wider text-on-primary transition-all hover:opacity-90"
             >
               Upgrade →
             </Link>
@@ -376,20 +463,9 @@ export default function InputCard({ onGenerate }: InputCardProps) {
         )}
 
         {errorKind?.type === 'message' && (
-          <p className="text-red-400 text-xs font-medium flex items-center gap-1.5 animate-in fade-in slide-in-from-top-1 duration-300">
+          <p className="animate-in slide-in-from-top-1 flex items-center gap-1.5 text-xs font-medium text-red-400 duration-300">
             <span className="material-symbols-outlined text-sm" aria-hidden="true">error</span>
             {errorKind.text}
-          </p>
-        )}
-
-        {remainingPodcasts !== null && errorKind === null && (
-          <p className="text-[0.6875rem] text-on-surface-variant flex items-center gap-1.5 animate-in fade-in duration-300">
-            <span className="material-symbols-outlined text-sm text-primary" aria-hidden="true">data_usage</span>
-            {remainingPodcasts <= 0
-              ? "All podcasts used this month."
-              : `${remainingPodcasts} podcast${remainingPodcasts !== 1 ? 's' : ''} left this month`}
-            {' · '}
-            <Link href="/pricing" className="text-primary hover:underline underline-offset-2">Upgrade</Link>
           </p>
         )}
       </div>

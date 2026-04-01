@@ -1,14 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import type { PodcastData } from '@/types';
 
 interface PlayerCardProps {
-  data: {
-    audio: string;
-    title: string;
-    source: string;
-    duration: string;
-  };
+  data: PodcastData;
 }
 
 export default function PlayerCard({ data }: PlayerCardProps) {
@@ -49,73 +45,71 @@ export default function PlayerCard({ data }: PlayerCardProps) {
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (audio) {
-      audio.src = `data:audio/mpeg;base64,${data.audio}`;
-      const updateMetadata = () => {
-        setDurationRaw(audio.duration || 0);
-      };
-      const updateTime = () => {
-        setCurrentTime(audio.currentTime || 0);
-      };
-      const handleEnd = () => {
-        setIsPlaying(false);
-      };
+    if (!audio) return;
 
-      audio.addEventListener('loadedmetadata', updateMetadata);
-      audio.addEventListener('timeupdate', updateTime);
-      audio.addEventListener('ended', handleEnd);
+    audio.src = `data:audio/mpeg;base64,${data.audio}`;
+    const updateMetadata = () => setDurationRaw(audio.duration || 0);
+    const updateTime = () => setCurrentTime(audio.currentTime || 0);
+    const handleEnd = () => setIsPlaying(false);
 
-      return () => {
-        audio.removeEventListener('loadedmetadata', updateMetadata);
-        audio.removeEventListener('timeupdate', updateTime);
-        audio.removeEventListener('ended', handleEnd);
-      };
-    }
+    audio.addEventListener('loadedmetadata', updateMetadata);
+    audio.addEventListener('timeupdate', updateTime);
+    audio.addEventListener('ended', handleEnd);
+
+    return () => {
+      audio.removeEventListener('loadedmetadata', updateMetadata);
+      audio.removeEventListener('timeupdate', updateTime);
+      audio.removeEventListener('ended', handleEnd);
+    };
   }, [data.audio]);
 
   const progress = durationRaw > 0 ? (currentTime / durationRaw) * 100 : 0;
 
   return (
-    <div className="bg-surface-container-low ghost-border rounded-xl p-6 space-y-6" role="region" aria-label="Audio player">
+    <div className="space-y-6 rounded-xl bg-surface-container-low p-6 ghost-border" role="region" aria-label="Audio player">
       <audio ref={audioRef} className="hidden" aria-hidden="true" />
-      
-      <div className="flex justify-between items-start">
+
+      <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
           <span className="material-symbols-outlined text-[10px] text-primary" aria-hidden="true">podcasts</span>
-          <span className="text-[0.625rem] uppercase tracking-widest font-bold text-primary">
+          <span className="text-[0.625rem] font-bold uppercase tracking-widest text-primary">
             Episode ready
           </span>
         </div>
-        <div className="bg-secondary-container text-on-secondary-container px-2 py-0.5 rounded text-[0.6rem] font-bold tracking-tighter" aria-label="High definition audio">
+        <div className="rounded bg-secondary-container px-2 py-0.5 text-[0.6rem] font-bold tracking-tighter text-on-secondary-container" aria-label="High definition audio">
           HD AUDIO
         </div>
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="w-16 h-16 bg-primary-container/10 rounded-xl flex items-center justify-center ghost-border flex-shrink-0" aria-hidden="true">
-          <span className="material-symbols-outlined text-primary text-3xl" aria-hidden="true">
+        <div className="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-xl bg-primary-container/10 ghost-border" aria-hidden="true">
+          <span className="material-symbols-outlined text-3xl text-primary" aria-hidden="true">
             podcasts
           </span>
         </div>
-        <div className="flex-grow min-w-0">
-          <h3 className="text-on-surface font-bold truncate">{data.title}</h3>
-          <p className="text-on-surface-variant text-xs truncate">Source: {data.source}</p>
-          <p className="text-[0.6875rem] text-on-surface mt-1 font-medium" aria-live="polite">
+        <div className="min-w-0 flex-grow">
+          <h3 className="truncate font-bold text-on-surface">{data.title}</h3>
+          <p className="truncate text-xs text-on-surface-variant">Source: {data.source}</p>
+          <p className="mt-1 text-[0.6875rem] font-medium text-on-surface" aria-live="polite">
             {formatTime(durationRaw - currentTime)} Remaining
           </p>
         </div>
-        <button 
+        <button
           onClick={handleDownload}
           aria-label="Download podcast episode"
-          className="p-3 bg-surface-container-highest text-on-surface rounded-xl ghost-border hover:bg-surface-bright transition-colors focus-visible:ring-1 focus-visible:ring-primary outline-none"
+          className="rounded-xl bg-surface-container-highest p-3 text-on-surface transition-colors hover:bg-surface-bright focus-visible:ring-1 focus-visible:ring-primary outline-none ghost-border"
         >
           <span className="material-symbols-outlined" aria-hidden="true">download</span>
         </button>
       </div>
 
+      <div className="rounded-xl bg-surface-container px-3 py-2 text-[0.7rem] text-on-surface-variant ghost-border">
+        Charged {data.tokensCharged} tokens · {data.tokensRemaining} left this month · {data.resolvedSelections.language} · {data.resolvedSelections.tone}
+      </div>
+
       <div className="space-y-2">
         <div
-          className="relative w-full h-1.5 bg-surface-container-highest rounded-full overflow-hidden cursor-pointer"
+          className="relative h-1.5 w-full cursor-pointer overflow-hidden rounded-full bg-surface-container-highest"
           role="progressbar"
           aria-valuenow={currentTime}
           aria-valuemin={0}
@@ -123,40 +117,45 @@ export default function PlayerCard({ data }: PlayerCardProps) {
           aria-label="Playback progress — click to seek"
           onClick={handleSeek}
         >
-          <div 
-            className="absolute top-0 left-0 h-full bg-primary transition-all duration-200"
+          <div
+            className="absolute left-0 top-0 h-full bg-primary transition-all duration-200"
             style={{ width: `${progress}%` }}
-          ></div>
+          />
         </div>
-        <div className="flex justify-between text-[0.6rem] font-medium text-on-surface-variant tracking-wider" aria-hidden="true">
+        <div className="flex justify-between text-[0.6rem] font-medium tracking-wider text-on-surface-variant" aria-hidden="true">
           <span>{formatTime(currentTime)}</span>
           <span>{formatTime(durationRaw)}</span>
         </div>
       </div>
 
       <div className="flex items-center justify-center gap-8 py-2">
-        <button 
-          onClick={() => { if (audioRef.current) audioRef.current.currentTime -= 10 }}
+        <button
+          onClick={() => {
+            if (audioRef.current) audioRef.current.currentTime -= 10;
+          }}
           aria-label="Rewind 10 seconds"
-          className="text-on-surface-variant hover:text-on-surface transition-colors focus-visible:text-primary outline-none"
+          className="text-on-surface-variant transition-colors hover:text-on-surface focus-visible:text-primary outline-none"
         >
           <span className="material-symbols-outlined text-3xl" aria-hidden="true">replay_10</span>
         </button>
-        
-        <button 
+
+        <button
           onClick={togglePlay}
           aria-label={isPlaying ? 'Pause' : 'Play'}
-          className="w-14 h-14 bg-on-surface text-background rounded-full flex items-center justify-center active:scale-90 transition-transform hover:brightness-110 focus-visible:ring-2 focus-visible:ring-primary outline-none"
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-on-surface text-background transition-transform hover:brightness-110 active:scale-90 focus-visible:ring-2 focus-visible:ring-primary outline-none"
         >
           <span className="material-symbols-outlined text-3xl" style={{ fontVariationSettings: "'FILL' 1" }}>
             {isPlaying ? 'pause' : 'play_arrow'}
           </span>
         </button>
-        
-        <button 
-          onClick={() => { if (audioRef.current) audioRef.current.currentTime += 30 }}
+
+        <button
+          onClick={() => {
+            if (audioRef.current) audioRef.current.currentTime += 30;
+          }}
           aria-label="Forward 30 seconds"
-          className="text-on-surface-variant hover:text-on-surface transition-colors focus-visible:text-primary outline-none">
+          className="text-on-surface-variant transition-colors hover:text-on-surface focus-visible:text-primary outline-none"
+        >
           <span className="material-symbols-outlined text-3xl" aria-hidden="true">forward_30</span>
         </button>
       </div>

@@ -1,8 +1,16 @@
-import type { PlanId } from '@/lib/plans';
+import type { DurationOption, PlanId, ResolvedPlanEntitlements, Tone, Language } from '@/lib/plans';
 
 export interface Turn {
   speaker: 'A' | 'B';
   text: string;
+}
+
+export interface ResolvedSelections {
+  language: Language;
+  duration: DurationOption;
+  tone: Tone;
+  voiceA: string;
+  voiceB: string;
 }
 
 export interface PodcastData {
@@ -11,8 +19,18 @@ export interface PodcastData {
   title: string;
   source: string;
   duration: string;
-  // Usage metadata returned by the API
-  usageCount?: number;
-  limit?: number;
-  plan?: PlanId;
+  plan: PlanId;
+  resolvedSelections: ResolvedSelections;
+  tokenBudget: number;
+  tokensUsed: number;
+  tokensRemaining: number;
+  tokensCharged: number;
+}
+
+export interface EntitlementsData {
+  plan: PlanId;
+  entitlements: ResolvedPlanEntitlements;
+  tokenBudget: number;
+  tokensUsed: number;
+  tokensRemaining: number;
 }
