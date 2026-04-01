@@ -118,6 +118,59 @@ function formatDuration(seconds: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+function isLibraryVoiceRestriction(errorText: string): boolean {
+  return errorText.includes('"code":"paid_plan_required"')
+    || errorText.includes('"type":"payment_required"')
+    || errorText.toLowerCase().includes('free users cannot use library voices');
+}
+
+async function synthesizeTurnAudio(
+  elevenLabsApiKey: string,
+  text: string,
+  preferredVoiceId: string,
+  fallbackVoiceId: string
+): Promise<ArrayBuffer> {
+  const synthesize = async (voiceId: string) =>
+    fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+      method: 'POST',
+      headers: {
+        'xi-api-key': elevenLabsApiKey,
+        'Content-Type': 'application/json',
+        Accept: 'audio/mpeg',
+      },
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_multilingual_v2',
+        output_format: 'mp3_44100_128',
+        voice_settings: {
+          stability: 0.45,
+          similarity_boost: 0.80,
+          style: 0.35,
+          use_speaker_boost: true,
+        },
+      }),
+    });
+
+  let ttsRes = await synthesize(preferredVoiceId);
+  if (!ttsRes.ok) {
+    const errText = await ttsRes.text();
+    if (preferredVoiceId !== fallbackVoiceId && isLibraryVoiceRestriction(errText)) {
+      console.warn(`[VoiceDrop] Voice ${preferredVoiceId} is not allowed for this ElevenLabs key. Falling back to ${fallbackVoiceId}.`);
+      ttsRes = await synthesize(fallbackVoiceId);
+      if (!ttsRes.ok) {
+        const fallbackErrText = await ttsRes.text();
+        throw new Error(
+          `ElevenLabs rejected both the selected voice and the default fallback. Check the server ELEVENLABS_API_KEY subscription or switch to non-library voices. Details: ${fallbackErrText}`
+        );
+      }
+      return ttsRes.arrayBuffer();
+    }
+    throw new Error(`ElevenLabs TTS error: ${errText}`);
+  }
+
+  return ttsRes.arrayBuffer();
+}
+
 export async function POST(req: NextRequest) {
   try {
     // 0a. Require authentication + resolve billing plan in one call
@@ -342,7 +395,7 @@ Article: ${articleText}`,
 
     // 3. ElevenLabs TTS per turn
     console.log(`[VoiceDrop] Generating audio with ElevenLabs...`);
-    // Conversational tone uses dedicated language-matched voices (free-tier IDs)
+    // Conversational tone uses dedicated language-matched voices
     const convVoices = tone === 'Conversational'
       ? (CONVERSATIONAL_VOICE_IDS[language] ?? CONVERSATIONAL_VOICE_IDS.English)
       : null;
@@ -351,35 +404,16 @@ Article: ${articleText}`,
     const audioBuffers: ArrayBuffer[] = [];
 
     for (const turn of turns) {
-      const voiceId = turn.speaker === 'A' ? voiceAId : voiceBId;
-      const ttsRes = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
-        {
-          method: 'POST',
-          headers: {
-            'xi-api-key': elevenLabsApiKey!,
-            'Content-Type': 'application/json',
-            Accept: 'audio/mpeg',
-          },
-          body: JSON.stringify({
-            text: turn.text,
-            model_id: 'eleven_multilingual_v2',
-            output_format: 'mp3_44100_128',
-            voice_settings: {
-              stability: 0.45,
-              similarity_boost: 0.80,
-              style: 0.35,
-              use_speaker_boost: true,
-            },
-          }),
-        }
+      const preferredVoiceId = turn.speaker === 'A' ? voiceAId : voiceBId;
+      const fallbackVoiceId = turn.speaker === 'A' ? DEFAULT_VOICE_A : DEFAULT_VOICE_B;
+      audioBuffers.push(
+        await synthesizeTurnAudio(
+          elevenLabsApiKey,
+          turn.text,
+          preferredVoiceId,
+          fallbackVoiceId
+        )
       );
-
-      if (!ttsRes.ok) {
-        const errText = await ttsRes.text();
-        throw new Error(`ElevenLabs TTS error: ${errText}`);
-      }
-      audioBuffers.push(await ttsRes.arrayBuffer());
     }
 
     // 4. Stitch Mp3s
